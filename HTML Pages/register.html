@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register — DPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --navy:#0f1f3d; --blue:#2563eb; --green:#10b981; --red:#ef4444; --border:#e2e8f0; --muted:#64748b; }
+    body { font-family:'DM Sans',sans-serif; min-height:100vh; display:grid; grid-template-columns:1fr 1fr; background:#f8fafc; }
+    .left { background:linear-gradient(160deg,var(--navy) 0%,#1e3a8a 100%); display:flex; flex-direction:column; justify-content:center; padding:60px; color:#fff; position:relative; overflow:hidden; }
+    .left::before { content:''; position:absolute; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,.04); top:-100px; right:-100px; }
+    .logo     { font-size:32px; font-weight:700; letter-spacing:-1px; margin-bottom:8px; }
+    .logo-sub { font-size:13px; opacity:.5; margin-bottom:60px; }
+    .left h2  { font-size:28px; font-weight:700; line-height:1.3; margin-bottom:16px; }
+    .left p   { font-size:14px; opacity:.65; line-height:1.7; max-width:340px; }
+    .steps    { margin-top:48px; display:flex; flex-direction:column; gap:20px; }
+    .step     { display:flex; align-items:flex-start; gap:14px; }
+    .step-num { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; margin-top:1px; }
+    .step-text .title { font-size:13px; font-weight:600; margin-bottom:2px; }
+    .step-text .desc  { font-size:12px; opacity:.55; }
+    .right { display:flex; align-items:center; justify-content:center; padding:40px; overflow-y:auto; }
+    .form-card { width:100%; max-width:440px; }
+    .form-card h1 { font-size:24px; font-weight:700; color:var(--navy); margin-bottom:6px; }
+    .form-card .sub { font-size:13px; color:var(--muted); margin-bottom:28px; }
+    .social-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+    .social-btn { display:flex; align-items:center; justify-content:center; gap:8px; padding:11px; border-radius:10px; border:1.5px solid var(--border); background:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; color:#1e293b; cursor:pointer; transition:all .2s; }
+    .social-btn:hover { border-color:#94a3b8; background:#f8fafc; }
+    .social-btn svg { width:18px; height:18px; flex-shrink:0; }
+    .social-btn.facebook { border-color:#4267B2; color:#4267B2; }
+    .social-btn.facebook:hover { background:#eef2ff; }
+    .divider { display:flex; align-items:center; gap:12px; margin:0 0 20px; }
+    .divider-line { flex:1; height:1px; background:var(--border); }
+    .divider-text { font-size:12px; color:var(--muted); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px; }
+    .form-group input, .form-group select {
+      width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:10px;
+      font-family:'DM Sans',sans-serif; font-size:14px; color:#1e293b; background:#fff; outline:none; transition:border .2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,.08); }
+    .form-group input::placeholder { color:#cbd5e1; }
+    .password-hint { font-size:11px; color:var(--muted); margin-top:4px; }
+    .submit-btn {
+      width:100%; padding:13px; border-radius:10px; border:none;
+      background:linear-gradient(135deg,var(--blue),#1d4ed8); color:#fff;
+      font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700; cursor:pointer;
+      transition:all .2s; box-shadow:0 4px 14px rgba(37,99,235,.3); margin-top:4px;
+    }
+    .submit-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,99,235,.4); }
+    .submit-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .links { text-align:center; margin-top:18px; font-size:13px; color:var(--muted); }
+    .links a { color:var(--blue); text-decoration:none; font-weight:600; }
+    .links a:hover { text-decoration:underline; }
+    .alert { padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:18px; display:none; }
+    .alert.error   { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; display:block; }
+    .alert.success { background:#dcfce7; color:#14532d; border:1px solid #bbf7d0; display:block; }
+    @media(max-width:768px) { body{grid-template-columns:1fr;} .left{display:none;} .form-row{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="left">
+  <div class="logo">DPT</div>
+  <div class="logo-sub">Digital Presence Tracker</div>
+  <h2>Start measuring your digital presence today.</h2>
+  <p>Join Kenyan SMEs using DPT to understand and grow their online visibility.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <div class="title">Create your account</div>
+        <div class="desc">Free. No credit card required.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <div class="title">Connect your platforms</div>
+        <div class="desc">Facebook, Instagram, Google Business, and more.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <div class="title">Get your LDVS score</div>
+        <div class="desc">Understand where you stand and how to improve.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="right">
+  <div class="form-card">
+    <h1>Create your account</h1>
+    <p class="sub">Free forever for Kenyan SMEs</p>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="social-row">
+      <button class="social-btn" onclick="signUpWithGoogle()">
+        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Google
+      </button>
+      <button class="social-btn facebook" onclick="signUpWithFacebook()">
+        <svg viewBox="0 0 24 24" fill="#4267B2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Facebook
+      </button>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-text">or sign up with email</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <form id="register-form" onsubmit="handleRegister(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="name" placeholder="Jane Wanjiku" required/>
+        </div>
+        <div class="form-group">
+          <label>Business Name *</label>
+          <input type="text" id="business_name" placeholder="Wanjiku's Boutique" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" id="email" placeholder="you@business.co.ke" required autocomplete="email"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Business Sector</label>
+          <select id="sector">
+            <option value="">Select sector</option>
+            <option value="Retail">Retail</option>
+            <option value="Food & Beverage">Food & Beverage</option>
+            <option value="Professional Services">Professional Services</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Education">Education</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Technology">Technology</option>
+            <option value="Agriculture">Agriculture</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <select id="location">
+            <option value="">Select location</option>
+            <option value="Nairobi">Nairobi</option>
+            <option value="Mombasa">Mombasa</option>
+            <option value="Kisumu">Kisumu</option>
+            <option value="Nakuru">Nakuru</option>
+            <option value="Eldoret">Eldoret</option>
+            <option value="Thika">Thika</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" id="password" placeholder="••••••••" required minlength="8" autocomplete="new-password"/>
+        <div class="password-hint">Minimum 8 characters</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password *</label>
+        <input type="password" id="password2" placeholder="••••••••" required autocomplete="new-password"/>
+      </div>
+      <button type="submit" class="submit-btn" id="submit-btn">Create Account</button>
+    </form>
+
+    <div class="links">Already have an account? <a href="login.html">Sign in</a></div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL      = 'https://xagbguncsimivveezckc.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhZ2JndW5jc2ltaXZ2ZWV6Y2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNjMyNDYsImV4cCI6MjA4ODYzOTI0Nn0.ex9vOixzsQ-p4gh9wQ5I3akcQAitdNlyv5XEgZYVc9k';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = 'dashboard.html';
+  });
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) window.location.href = 'dashboard.html';
+  });
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const name    = document.getElementById('name').value.trim();
+    const biz     = document.getElementById('business_name').value.trim();
+    const email   = document.getElementById('email').value.trim();
+    const sector  = document.getElementById('sector').value;
+    const loc     = document.getElementById('location').value;
+    const pass    = document.getElementById('password').value;
+    const pass2   = document.getElementById('password2').value;
+    const btn     = document.getElementById('submit-btn');
+
+    if (pass !== pass2) { showAlert('Passwords do not match.', 'error'); return; }
+
+    btn.disabled = true; btn.textContent = 'Creating account...';
+    hideAlert();
+
+    const { data, error } = await sb.auth.signUp({
+      email, password: pass,
+      options: {
+        data: { name, business_name: biz, sector, location: loc },
+        emailRedirectTo: window.location.origin + '/dashboard.html',
+      }
+    });
+
+    if (error) {
+      showAlert(error.message, 'error');
+      btn.disabled = false; btn.textContent = 'Create Account';
+      return;
+    }
+
+    // If email confirmation is OFF in Supabase → user is immediately active
+    if (data.session) {
+      // Save profile
+      await sb.from('profiles').upsert({
+        user_id:       data.user.id,
+        name, business_name: biz, sector, location: loc,
+        created_at:    new Date().toISOString(),
+      }, { onConflict: 'user_id' }).catch(() => {});
+      window.location.href = 'dashboard.html';
+    } else {
+      // Email confirmation is ON
+      showAlert('Account created! Check your email to confirm before signing in.', 'success');
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
+  }
+
+  async function signUpWithGoogle() {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo:  window.location.origin + '/dashboard.html',
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+      }
+    });
+    if (error) showAlert('Google sign-up failed: ' + error.message, 'error');
+  }
+
+  async function signUpWithFacebook() {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        scopes:     'email,public_profile',
+        redirectTo: window.location.origin + '/dashboard.html',
+      }
+    });
+    if (error) showAlert('Facebook sign-up failed: ' + error.message, 'error');
+  }
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('alert');
+    el.textContent = msg; el.className = `alert ${type}`;
+  }
+  function hideAlert() { document.getElementById('alert').className = 'alert'; }
+</script>
+</body>
+</html>

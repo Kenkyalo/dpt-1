@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recommendations — DPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--navy:#0f1f3d;--blue:#2563eb;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--slate:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;}
+    body{font-family:'DM Sans',sans-serif;background:var(--slate);color:var(--text);min-height:100vh;}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--navy);display:flex;flex-direction:column;padding:24px 0;z-index:100;}
+    .sidebar-logo{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1);}
+    .sidebar-logo .mark{font-size:22px;font-weight:700;color:#fff;}
+    .sidebar-logo .sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
+    .nav{flex:1;padding:16px 0;}
+    .nav a{display:flex;align-items:center;gap:10px;padding:10px 24px;color:rgba(255,255,255,.55);text-decoration:none;font-size:13.5px;font-weight:500;transition:all .2s;border-left:3px solid transparent;}
+    .nav a:hover{color:#fff;background:rgba(255,255,255,.06);}
+    .nav a.active{color:#fff;background:rgba(255,255,255,.1);border-left-color:var(--blue);}
+    .sidebar-user{margin:0 12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;}
+    .avatar{width:34px;height:34px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;flex-shrink:0;}
+    .avatar-info .name{font-size:12px;font-weight:600;color:#fff;}
+    .avatar-info .email{font-size:10px;color:rgba(255,255,255,.45);}
+    .main{margin-left:220px;padding:32px 40px;}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;}
+    .topbar h1{font-size:22px;font-weight:700;color:var(--navy);}
+    .topbar p{font-size:13px;color:var(--muted);margin-top:3px;}
+    .lang-toggle{display:flex;gap:6px;align-items:center;}
+    .lang-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 16px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;background:#fff;color:var(--muted);transition:all .2s;}
+    .lang-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+    /* SCORE BANNER */
+    .score-banner{background:linear-gradient(135deg,var(--navy),#1e3a8a);border-radius:16px;padding:24px 32px;color:#fff;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+    .score-banner .s-label{font-size:11px;opacity:.6;margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase;}
+    .score-banner .s-val{font-size:40px;font-weight:700;font-family:'DM Mono',monospace;}
+    .score-banner .s-grade{font-size:13px;opacity:.7;margin-top:4px;}
+    .score-stats{display:flex;gap:32px;}
+    .stat{text-align:right;}
+    .stat-val{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;}
+    .stat-lbl{font-size:11px;opacity:.5;margin-top:2px;}
+
+    /* FILTER BAR */
+    .filter-bar{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+    .filter-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;border:1.5px solid var(--border);cursor:pointer;background:#fff;color:var(--muted);transition:all .2s;}
+    .filter-btn:hover{border-color:var(--blue);color:var(--blue);}
+    .filter-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+    .filter-btn.high{border-color:var(--red);color:var(--red);}
+    .filter-btn.high.active{background:var(--red);color:#fff;}
+    .filter-btn.medium{border-color:var(--amber);color:var(--amber);}
+    .filter-btn.medium.active{background:var(--amber);color:#fff;}
+
+    /* REC CARDS */
+    .recs-list{display:flex;flex-direction:column;gap:16px;}
+    .rec-card{background:#fff;border-radius:16px;border:1.5px solid var(--border);padding:24px 28px;display:flex;gap:20px;align-items:flex-start;transition:all .2s;border-left:5px solid;}
+    .rec-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08);transform:translateY(-1px);}
+    .rec-card.HIGH{border-left-color:var(--red);}
+    .rec-card.MEDIUM{border-left-color:var(--amber);}
+    .rec-card.LOW{border-left-color:var(--green);}
+    .rec-icon{font-size:32px;flex-shrink:0;margin-top:2px;}
+    .rec-body{flex:1;}
+    .rec-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+    .rec-title{font-size:16px;font-weight:700;color:var(--navy);}
+    .priority-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em;}
+    .priority-badge.HIGH{background:#fee2e2;color:#991b1b;}
+    .priority-badge.MEDIUM{background:#fef3c7;color:#92400e;}
+    .priority-badge.LOW{background:#dcfce7;color:#14532d;}
+    .rec-desc{font-size:14px;color:var(--muted);line-height:1.65;}
+    .rec-impact{margin-top:12px;font-size:12px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:6px;}
+    .rec-divider{height:1px;background:var(--border);margin:12px 0;}
+    .rec-sw{font-size:13px;color:var(--muted);line-height:1.65;font-style:italic;}
+
+    /* EMPTY */
+    .empty{text-align:center;padding:60px 20px;}
+    .empty .emoji{font-size:48px;margin-bottom:16px;}
+    .empty h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+    .empty p{font-size:14px;color:var(--muted);}
+
+    /* COMPUTE CTA */
+    .cta-card{background:#fff;border-radius:16px;border:1.5px solid var(--border);padding:32px;text-align:center;margin-bottom:28px;}
+    .cta-card h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+    .cta-card p{font-size:14px;color:var(--muted);margin-bottom:20px;}
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue),#1d4ed8);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;box-shadow:0 4px 14px rgba(37,99,235,.3);}
+    .btn-primary:hover{transform:translateY(-1px);}
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="mark">DPT</div><div class="sub">Digital Presence Tracker</div></div>
+  <nav class="nav">
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="connect-platforms.html">🔌 Connect Platforms</a>
+    <a href="history.html">📈 Score History</a>
+    <a href="recommendations.html" class="active">💡 Recommendations</a>
+    <a href="settings.html">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="avatar" id="av">?</div>
+    <div class="avatar-info"><div class="name" id="uname">Loading...</div><div class="email" id="uemail"></div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1>💡 Recommendations</h1><p>Personalized actions to improve your digital visibility score</p></div>
+    <div class="lang-toggle">
+      <span style="font-size:12px;color:var(--muted);margin-right:4px;">Language:</span>
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">English</button>
+      <button class="lang-btn" id="btn-sw" onclick="setLang('sw')">Kiswahili</button>
+    </div>
+  </div>
+
+  <!-- SCORE BANNER -->
+  <div class="score-banner" id="score-banner" style="display:none">
+    <div>
+      <div class="s-label">Current LDVS Score</div>
+      <div class="s-val" id="ban-score">—</div>
+      <div class="s-grade" id="ban-grade">—</div>
+    </div>
+    <div class="score-stats">
+      <div class="stat"><div class="stat-val" id="ban-below">—</div><div class="stat-lbl">Indicators below threshold</div></div>
+      <div class="stat"><div class="stat-val" id="ban-count">—</div><div class="stat-lbl">Active recommendations</div></div>
+    </div>
+  </div>
+
+  <!-- NO SCORE CTA -->
+  <div class="cta-card" id="cta-card" style="display:none">
+    <h3>No score computed yet</h3>
+    <p>Connect your platforms and compute your first LDVS score to receive personalized recommendations.</p>
+    <a href="connect-platforms.html" class="btn-primary">🧮 Compute My Score</a>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar" id="filter-bar" style="display:none">
+    <button class="filter-btn active" onclick="setFilter('all')">All</button>
+    <button class="filter-btn high" id="f-high" onclick="setFilter('HIGH')">🔴 High Priority</button>
+    <button class="filter-btn medium" id="f-med" onclick="setFilter('MEDIUM')">🟡 Medium Priority</button>
+    <button class="filter-btn" onclick="setFilter('LOW')">🟢 Low Priority</button>
+  </div>
+
+  <!-- RECS LIST -->
+  <div class="recs-list" id="recs-list"></div>
+</main>
+
+<script src="ldvs.js"></script>
+<script>
+  let currentLang   = 'en';
+  let currentFilter = 'all';
+  let allRecs       = [];
+  let currentUser   = null;
+  let latestScore   = null;
+
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) { window.location.href = 'login.html'; return; }
+    currentUser = data.session.user;
+    const name  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+    document.getElementById('uname').textContent  = name;
+    document.getElementById('uemail').textContent = currentUser.email;
+    document.getElementById('av').textContent     = name[0].toUpperCase();
+    // Read language preference
+    const lang = currentUser.user_metadata?.language || 'en';
+    setLang(lang);
+    loadRecs();
+  });
+
+  async function loadRecs() {
+    // Get latest score
+    const { data: scores } = await sb.from('scores').select('*')
+      .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+
+    if (!scores || scores.length === 0) {
+      document.getElementById('cta-card').style.display = 'block';
+      return;
+    }
+
+    latestScore = scores[0];
+    const cl    = classifyLDVS(latestScore.score);
+
+    document.getElementById('score-banner').style.display = 'flex';
+    document.getElementById('ban-score').textContent = latestScore.score;
+    document.getElementById('ban-grade').textContent = cl.grade;
+
+    // Get recommendations for this score
+    const { data: recs } = await sb.from('recommendations').select('*')
+      .eq('score_id', latestScore.id);
+
+    if (!recs || recs.length === 0) {
+      // Generate from rule engine if none saved
+      const scores_obj = {
+        profileScore:        latestScore.profile_complete || 0,
+        postingScore:        latestScore.post_freq        || 0,
+        engagementScore:     latestScore.engagement       || 0,
+        responsivenessScore: latestScore.responsiveness   || 0,
+        platformScore:       latestScore.platform_count   || 0,
+      };
+      allRecs = generateRecommendations(scores_obj, currentLang).map(r => ({
+        icon: r.icon, priority: r.priority,
+        title_en: r.titleEn || r.title, title_sw: r.titleSw || r.title,
+        desc_en:  r.descEn  || r.desc,  desc_sw:  r.descSw  || r.desc,
+      }));
+    } else {
+      allRecs = recs;
+    }
+
+    document.getElementById('ban-below').textContent = allRecs.filter(r => r.priority === 'HIGH').length;
+    document.getElementById('ban-count').textContent = allRecs.length;
+    document.getElementById('filter-bar').style.display = 'flex';
+    renderRecs();
+  }
+
+  function renderRecs() {
+    const container = document.getElementById('recs-list');
+    const filtered  = currentFilter === 'all' ? allRecs : allRecs.filter(r => r.priority === currentFilter);
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="emoji">✅</div>
+          <h3>All good here!</h3>
+          <p>No ${currentFilter === 'all' ? '' : currentFilter.toLowerCase() + ' priority'} recommendations at this time. Keep up the great work.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map((r, i) => {
+      const title = currentLang === 'sw' ? (r.title_sw || r.titleSw || r.title_en) : (r.title_en || r.titleEn || '');
+      const desc  = currentLang === 'sw' ? (r.desc_sw  || r.descSw  || r.desc_en)  : (r.desc_en  || r.descEn  || '');
+      const altTitle = currentLang === 'sw' ? (r.title_en || r.titleEn || '') : (r.title_sw || r.titleSw || '');
+      const altDesc  = currentLang === 'sw' ? (r.desc_en  || r.descEn  || '') : (r.desc_sw  || r.descSw  || '');
+      const altLang  = currentLang === 'sw' ? 'English' : 'Kiswahili';
+
+      return `
+        <div class="rec-card ${r.priority}">
+          <div class="rec-icon">${r.icon || '💡'}</div>
+          <div class="rec-body">
+            <div class="rec-header">
+              <span class="rec-title">${title}</span>
+              <span class="priority-badge ${r.priority}">${r.priority}</span>
+            </div>
+            <div class="rec-desc">${desc}</div>
+            <div class="rec-impact">📈 Acting on this can improve your LDVS score</div>
+            ${altDesc ? `
+            <div class="rec-divider"></div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;">${altLang}</div>
+            <div class="rec-sw"><strong>${altTitle}</strong> — ${altDesc}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.getElementById('btn-en').className = lang === 'en' ? 'lang-btn active' : 'lang-btn';
+    document.getElementById('btn-sw').className = lang === 'sw' ? 'lang-btn active' : 'lang-btn';
+    renderRecs();
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    renderRecs();
+  }
+</script>
+</body>
+</html>

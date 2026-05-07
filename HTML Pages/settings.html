@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings — DPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--navy:#0f1f3d;--blue:#2563eb;--green:#10b981;--red:#ef4444;--slate:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;}
+    body{font-family:'DM Sans',sans-serif;background:var(--slate);color:var(--text);min-height:100vh;}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--navy);display:flex;flex-direction:column;padding:24px 0;z-index:100;}
+    .sidebar-logo{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1);}
+    .sidebar-logo .mark{font-size:22px;font-weight:700;color:#fff;}
+    .sidebar-logo .sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
+    .nav{flex:1;padding:16px 0;}
+    .nav a{display:flex;align-items:center;gap:10px;padding:10px 24px;color:rgba(255,255,255,.55);text-decoration:none;font-size:13.5px;font-weight:500;transition:all .2s;border-left:3px solid transparent;}
+    .nav a:hover{color:#fff;background:rgba(255,255,255,.06);}
+    .nav a.active{color:#fff;background:rgba(255,255,255,.1);border-left-color:var(--blue);}
+    .sidebar-user{margin:0 12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;}
+    .avatar{width:34px;height:34px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;flex-shrink:0;}
+    .avatar-info .name{font-size:12px;font-weight:600;color:#fff;}
+    .avatar-info .email{font-size:10px;color:rgba(255,255,255,.45);}
+    .main{margin-left:220px;padding:32px 40px;max-width:900px;}
+    h1{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:28px;}
+
+    .section{background:#fff;border-radius:16px;border:1.5px solid var(--border);margin-bottom:20px;overflow:hidden;}
+    .section-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .section-header h2{font-size:15px;font-weight:700;color:var(--navy);}
+    .section-header p{font-size:12px;color:var(--muted);margin-top:2px;}
+    .section-body{padding:24px;}
+
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .form-group{margin-bottom:18px;}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;}
+    .form-group input,.form-group select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border .2s;}
+    .form-group input:focus,.form-group select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.08);}
+    .form-group input:disabled{background:#f8fafc;color:var(--muted);cursor:not-allowed;}
+    .form-group .hint{font-size:11px;color:var(--muted);margin-top:4px;}
+
+    .lang-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}
+    .lang-opt{border:1.5px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;}
+    .lang-opt:hover{border-color:#93c5fd;}
+    .lang-opt.sel{border-color:var(--blue);background:#eff6ff;}
+    .lang-opt .flag{font-size:24px;}
+    .lang-opt .lname{font-size:14px;font-weight:600;color:var(--navy);}
+    .lang-opt .lsub{font-size:11px;color:var(--muted);}
+
+    .btn-save{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;cursor:pointer;transition:all .2s;}
+    .btn-save:hover{background:#1d4ed8;}
+    .btn-save:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-danger{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:1.5px solid var(--red);background:#fff;color:var(--red);cursor:pointer;transition:all .2s;}
+    .btn-danger:hover{background:#fee2e2;}
+    .btn-logout{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 24px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;}
+    .btn-logout:hover{border-color:var(--navy);color:var(--navy);}
+
+    .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
+    .alert.success{background:#dcfce7;color:#14532d;border:1px solid #bbf7d0;display:block;}
+    .alert.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;display:block;}
+
+    .danger-zone{border-color:#fecaca;}
+    .danger-zone .section-header{border-color:#fecaca;}
+    .danger-zone .section-header h2{color:var(--red);}
+
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:4px;}
+    .stat-card{background:var(--slate);border-radius:10px;padding:16px;text-align:center;}
+    .stat-val{font-size:24px;font-weight:700;color:var(--navy);}
+    .stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
+
+    .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;background:var(--navy);box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast.success{background:var(--green);}
+    .toast.error{background:var(--red);}
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="mark">DPT</div><div class="sub">Digital Presence Tracker</div></div>
+  <nav class="nav">
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="connect-platforms.html">🔌 Connect Platforms</a>
+    <a href="history.html">📈 Score History</a>
+    <a href="recommendations.html">💡 Recommendations</a>
+    <a href="settings.html" class="active">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="avatar" id="av">?</div>
+    <div class="avatar-info"><div class="name" id="uname">Loading...</div><div class="email" id="uemail"></div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <h1>⚙️ Settings</h1>
+
+  <!-- ACCOUNT STATS -->
+  <div class="section" style="margin-bottom:20px;">
+    <div class="section-header"><div><h2>Account Overview</h2></div></div>
+    <div class="section-body">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="st-scores">—</div><div class="stat-lbl">Scores computed</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-platforms">—</div><div class="stat-lbl">Platforms connected</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-latest">—</div><div class="stat-lbl">Latest LDVS score</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUSINESS PROFILE -->
+  <div class="section">
+    <div class="section-header">
+      <div><h2>Business Profile</h2><p>Update your business information</p></div>
+      <button class="btn-save" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+    </div>
+    <div class="section-body">
+      <div class="alert" id="profile-alert"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Full name</label><input type="text" id="p-name" placeholder="Jane Wanjiku"/></div>
+        <div class="form-group"><label>Business name</label><input type="text" id="p-biz" placeholder="Wanjiku's Boutique"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Sector</label>
+          <select id="p-sector">
+            <option value="">Select sector</option>
+            <option>Retail</option><option>Food &amp; Beverage</option><option>Fashion</option>
+            <option>Professional Services</option><option>Healthcare</option><option>Education</option>
+            <option>Technology</option><option>Agriculture</option><option>Beauty &amp; Wellness</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Location</label>
+          <select id="p-location">
+            <option value="">Select location</option>
+            <option>Nairobi</option><option>Mombasa</option><option>Kisumu</option>
+            <option>Nakuru</option><option>Eldoret</option><option>Thika</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Email address</label><input type="email" id="p-email" disabled/><div class="hint">Email cannot be changed. Contact support if needed.</div></div>
+    </div>
+  </div>
+
+  <!-- LANGUAGE -->
+  <div class="section">
+    <div class="section-header">
+      <div><h2>Recommendation Language</h2><p>Choose which language your recommendations appear in</p></div>
+      <button class="btn-save" id="save-lang-btn" onclick="saveLang()">Save</button>
+    </div>
+    <div class="section-body">
+      <div class="lang-row">
+        <div class="lang-opt sel" id="l-en" onclick="selLang('en')">
+          <span class="flag">🇬🇧</span>
+          <div><div class="lname">English</div><div class="lsub">All recommendations in English</div></div>
+        </div>
+        <div class="lang-opt" id="l-sw" onclick="selLang('sw')">
+          <span class="flag">🇰🇪</span>
+          <div><div class="lname">Kiswahili</div><div class="lsub">Mapendekezo yote kwa Kiswahili</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSWORD -->
+  <div class="section">
+    <div class="section-header">
+      <div><h2>Change Password</h2><p>Update your account password</p></div>
+      <button class="btn-save" id="save-pass-btn" onclick="savePassword()">Update Password</button>
+    </div>
+    <div class="section-body">
+      <div class="alert" id="pass-alert"></div>
+      <div class="form-row">
+        <div class="form-group"><label>New password</label><input type="password" id="p-pass1" placeholder="••••••••" minlength="8"/></div>
+        <div class="form-group"><label>Confirm new password</label><input type="password" id="p-pass2" placeholder="••••••••"/></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGN OUT -->
+  <div class="section">
+    <div class="section-header">
+      <div><h2>Session</h2><p>Sign out of your DPT account on this device</p></div>
+      <button class="btn-logout" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- DANGER ZONE -->
+  <div class="section danger-zone">
+    <div class="section-header">
+      <div><h2>⚠️ Danger Zone</h2><p>Permanently delete your account and all associated data</p></div>
+      <button class="btn-danger" onclick="confirmDelete()">Delete Account</button>
+    </div>
+    <div class="section-body" style="padding:16px 24px;">
+      <p style="font-size:13px;color:var(--muted);">This will permanently delete your account, all LDVS scores, recommendations, platform connections, and profile data. <strong>This action cannot be undone.</strong></p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentUser = null;
+  let selectedLang = 'en';
+
+  sb.auth.getSession().then(async ({ data }) => {
+    if (!data.session) { window.location.href = 'login.html'; return; }
+    currentUser = data.session.user;
+    const meta  = currentUser.user_metadata || {};
+    const name  = meta.business_name || currentUser.email.split('@')[0];
+
+    document.getElementById('uname').textContent  = name;
+    document.getElementById('uemail').textContent = currentUser.email;
+    document.getElementById('av').textContent     = name[0].toUpperCase();
+    document.getElementById('p-email').value      = currentUser.email;
+
+    // Load profile from Supabase
+    const { data: profile } = await sb.from('profiles').select('*').eq('user_id', currentUser.id).single();
+    if (profile) {
+      document.getElementById('p-name').value    = profile.name    || meta.name    || '';
+      document.getElementById('p-biz').value     = profile.business_name || meta.business_name || '';
+      document.getElementById('p-sector').value   = profile.sector   || meta.sector   || '';
+      document.getElementById('p-location').value = profile.location || meta.location || '';
+      selectedLang = profile.language || meta.language || 'en';
+      selLang(selectedLang);
+    } else {
+      document.getElementById('p-name').value    = meta.name    || '';
+      document.getElementById('p-biz').value     = meta.business_name || '';
+      document.getElementById('p-sector').value   = meta.sector   || '';
+      document.getElementById('p-location').value = meta.location || '';
+    }
+
+    // Load stats
+    const { count: scoreCount } = await sb.from('scores').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: platCount  } = await sb.from('platform_connections').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { data: latestScore  } = await sb.from('scores').select('score').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+
+    document.getElementById('st-scores').textContent    = scoreCount   || 0;
+    document.getElementById('st-platforms').textContent = platCount    || 0;
+    document.getElementById('st-latest').textContent    = latestScore?.[0]?.score || '—';
+  });
+
+  function selLang(l) {
+    selectedLang = l;
+    document.getElementById('l-en').classList.toggle('sel', l === 'en');
+    document.getElementById('l-sw').classList.toggle('sel', l === 'sw');
+  }
+
+  async function saveProfile() {
+    const btn  = document.getElementById('save-profile-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    const name     = document.getElementById('p-name').value.trim();
+    const biz      = document.getElementById('p-biz').value.trim();
+    const sector   = document.getElementById('p-sector').value;
+    const location = document.getElementById('p-location').value;
+
+    const { error } = await sb.from('profiles').upsert({
+      user_id: currentUser.id, name, business_name: biz,
+      sector, location, updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+    await sb.auth.updateUser({ data: { name, business_name: biz, sector, location } });
+
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    if (error) { toast('Failed to save: ' + error.message, 'error'); }
+    else        { toast('Profile saved!', 'success'); document.getElementById('uname').textContent = biz || name; }
+  }
+
+  async function saveLang() {
+    const btn = document.getElementById('save-lang-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    await sb.from('profiles').upsert({
+      user_id: currentUser.id, language: selectedLang, updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+    await sb.auth.updateUser({ data: { language: selectedLang } });
+
+    btn.disabled = false; btn.textContent = 'Save';
+    toast('Language preference saved!', 'success');
+  }
+
+  async function savePassword() {
+    const pass1 = document.getElementById('p-pass1').value;
+    const pass2 = document.getElementById('p-pass2').value;
+    const btn   = document.getElementById('save-pass-btn');
+    const alert = document.getElementById('pass-alert');
+    alert.className = 'alert';
+
+    if (!pass1) { alert.className = 'alert error'; alert.textContent = 'Enter a new password.'; return; }
+    if (pass1.length < 8) { alert.className = 'alert error'; alert.textContent = 'Password must be at least 8 characters.'; return; }
+    if (pass1 !== pass2)  { alert.className = 'alert error'; alert.textContent = 'Passwords do not match.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Updating...';
+    const { error } = await sb.auth.updateUser({ password: pass1 });
+    btn.disabled = false; btn.textContent = 'Update Password';
+
+    if (error) { alert.className = 'alert error'; alert.textContent = 'Error: ' + error.message; }
+    else {
+      alert.className = 'alert success'; alert.textContent = 'Password updated successfully.';
+      document.getElementById('p-pass1').value = '';
+      document.getElementById('p-pass2').value = '';
+    }
+  }
+
+  async function signOut() {
+    await sb.auth.signOut();
+    window.location.href = 'login.html';
+  }
+
+  async function confirmDelete() {
+    const confirmed = confirm('Are you absolutely sure? This will permanently delete your account, all scores, recommendations, and platform connections. This CANNOT be undone.');
+    if (!confirmed) return;
+    const double = confirm('Final confirmation: delete everything permanently?');
+    if (!double) return;
+
+    // Delete all user data first (Supabase RLS cascade should handle this)
+    await sb.from('recommendations').delete().in('score_id',
+      (await sb.from('scores').select('id').eq('user_id', currentUser.id)).data?.map(s => s.id) || []
+    );
+    await sb.from('scores').delete().eq('user_id', currentUser.id);
+    await sb.from('platform_connections').delete().eq('user_id', currentUser.id);
+    await sb.from('integrations').delete().eq('user_id', currentUser.id);
+    await sb.from('profiles').delete().eq('user_id', currentUser.id);
+
+    await sb.auth.signOut();
+    window.location.href = 'register.html';
+  }
+
+  function toast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = `toast ${type} show`;
+    setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+</script>
+</body>
+</html>

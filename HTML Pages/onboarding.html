@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome — DPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--navy:#0f1f3d;--blue:#2563eb;--green:#10b981;--border:#e2e8f0;--muted:#64748b;}
+    body{font-family:'DM Sans',sans-serif;min-height:100vh;background:#f8fafc;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .card{background:#fff;border-radius:20px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.08);}
+    .prog-bar{height:4px;background:var(--border);}
+    .prog-fill{height:100%;background:var(--blue);transition:width .4s ease;border-radius:2px;}
+    .body{padding:48px;}
+    .step{display:none;} .step.active{display:block;}
+    .ico{font-size:48px;margin-bottom:16px;}
+    .step-num{font-size:12px;color:var(--muted);margin-bottom:12px;font-weight:500;}
+    h2{font-size:24px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+    .sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px;}
+    .form-group{margin-bottom:18px;}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;}
+    .form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#1e293b;background:#fff;outline:none;transition:border .2s;resize:none;}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.08);}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+    .lang-opt{border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .2s;text-align:center;}
+    .lang-opt:hover{border-color:#93c5fd;} .lang-opt.sel{border-color:var(--blue);background:#eff6ff;}
+    .lang-opt .flag{font-size:28px;margin-bottom:6px;}
+    .lang-opt .lname{font-size:14px;font-weight:600;color:var(--navy);}
+    .lang-opt .lsub{font-size:11px;color:var(--muted);}
+    .plat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+    .plat-opt{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;}
+    .plat-opt:hover{border-color:#93c5fd;} .plat-opt.sel{border-color:var(--blue);background:#eff6ff;}
+    .plat-opt .pico{font-size:22px;} .plat-opt .pname{font-size:13px;font-weight:600;color:var(--navy);}
+    .btn-row{display:flex;gap:12px;margin-top:8px;}
+    .btn-p{flex:1;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),#1d4ed8);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(37,99,235,.3);}
+    .btn-p:hover{transform:translateY(-1px);} .btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+    .btn-s{padding:13px 24px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;}
+    .btn-s:hover{border-color:var(--blue);color:var(--blue);}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="prog-bar"><div class="prog-fill" id="prog" style="width:25%"></div></div>
+  <div class="body">
+
+    <div class="step active" id="s1">
+      <div class="ico">👋</div>
+      <div class="step-num">Step 1 of 4</div>
+      <h2>Welcome to DPT!</h2>
+      <p class="sub">Let's get your account set up in 4 quick steps. Takes about 2 minutes.</p>
+      <div class="form-group"><label>Your full name</label><input type="text" id="ob-name" placeholder="Jane Wanjiku"/></div>
+      <div class="form-group"><label>Business name</label><input type="text" id="ob-biz" placeholder="Wanjiku's Boutique"/></div>
+      <div class="btn-row"><button class="btn-p" onclick="next(1)">Continue →</button></div>
+    </div>
+
+    <div class="step" id="s2">
+      <div class="ico">🏪</div>
+      <div class="step-num">Step 2 of 4</div>
+      <h2>About your business</h2>
+      <p class="sub">This helps us give recommendations tailored to your sector and location.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Sector</label>
+          <select id="ob-sector">
+            <option value="">Select sector</option>
+            <option>Retail</option><option>Food &amp; Beverage</option><option>Fashion</option>
+            <option>Professional Services</option><option>Healthcare</option><option>Education</option>
+            <option>Technology</option><option>Agriculture</option><option>Beauty &amp; Wellness</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Location</label>
+          <select id="ob-location">
+            <option value="">Select location</option>
+            <option>Nairobi</option><option>Mombasa</option><option>Kisumu</option>
+            <option>Nakuru</option><option>Eldoret</option><option>Thika</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Brief description <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <textarea id="ob-desc" rows="3" placeholder="What does your business sell or offer?"></textarea>
+      </div>
+      <div class="btn-row"><button class="btn-s" onclick="prev(2)">← Back</button><button class="btn-p" onclick="next(2)">Continue →</button></div>
+    </div>
+
+    <div class="step" id="s3">
+      <div class="ico">🌍</div>
+      <div class="step-num">Step 3 of 4</div>
+      <h2>Choose your language</h2>
+      <p class="sub">DPT delivers recommendations in both English and Kiswahili. You can change this anytime in Settings.</p>
+      <div class="lang-grid">
+        <div class="lang-opt sel" id="lang-en" onclick="selLang('en')">
+          <div class="flag">🇬🇧</div><div class="lname">English</div><div class="lsub">Recommendations in English</div>
+        </div>
+        <div class="lang-opt" id="lang-sw" onclick="selLang('sw')">
+          <div class="flag">🇰🇪</div><div class="lname">Kiswahili</div><div class="lsub">Mapendekezo kwa Kiswahili</div>
+        </div>
+      </div>
+      <div class="btn-row"><button class="btn-s" onclick="prev(3)">← Back</button><button class="btn-p" onclick="next(3)">Continue →</button></div>
+    </div>
+
+    <div class="step" id="s4">
+      <div class="ico">🔌</div>
+      <div class="step-num">Step 4 of 4</div>
+      <h2>Which platforms are you on?</h2>
+      <p class="sub">Select all that apply. You'll connect them and pull data in the next screen.</p>
+      <div class="plat-grid">
+        <div class="plat-opt" id="plat-facebook"  onclick="togPlat('facebook')"><span class="pico">📘</span><div class="pname">Facebook</div></div>
+        <div class="plat-opt" id="plat-instagram" onclick="togPlat('instagram')"><span class="pico">📸</span><div class="pname">Instagram</div></div>
+        <div class="plat-opt" id="plat-google"    onclick="togPlat('google')"><span class="pico">🔍</span><div class="pname">Google Business</div></div>
+        <div class="plat-opt" id="plat-whatsapp"  onclick="togPlat('whatsapp')"><span class="pico">💬</span><div class="pname">WhatsApp Business</div></div>
+        <div class="plat-opt" id="plat-website"   onclick="togPlat('website')"><span class="pico">🌐</span><div class="pname">Business Website</div></div>
+        <div class="plat-opt" id="plat-tiktok"    onclick="togPlat('tiktok')"><span class="pico">🎵</span><div class="pname">TikTok</div></div>
+      </div>
+      <div class="btn-row"><button class="btn-s" onclick="prev(4)">← Back</button><button class="btn-p" id="fin-btn" onclick="finish()">Finish Setup 🎉</button></div>
+    </div>
+
+  </div>
+</div>
+<script>
+  let lang='en', plats=[], user=null;
+  const progs=[25,50,75,100];
+
+  sb.auth.getSession().then(({data})=>{
+    if(!data.session){window.location.href='login.html';return;}
+    user=data.session.user;
+    const m=user.user_metadata||{};
+    if(m.name)          document.getElementById('ob-name').value=m.name;
+    if(m.business_name) document.getElementById('ob-biz').value=m.business_name;
+    if(m.sector)        document.getElementById('ob-sector').value=m.sector;
+    if(m.location)      document.getElementById('ob-location').value=m.location;
+  });
+
+  function next(n){
+    document.getElementById('s'+n).classList.remove('active');
+    document.getElementById('s'+(n+1)).classList.add('active');
+    document.getElementById('prog').style.width=progs[n]+'%';
+  }
+  function prev(n){
+    document.getElementById('s'+n).classList.remove('active');
+    document.getElementById('s'+(n-1)).classList.add('active');
+    document.getElementById('prog').style.width=progs[n-2]+'%';
+  }
+  function selLang(l){
+    lang=l;
+    document.getElementById('lang-en').classList.toggle('sel',l==='en');
+    document.getElementById('lang-sw').classList.toggle('sel',l==='sw');
+  }
+  function togPlat(p){
+    const el=document.getElementById('plat-'+p);
+    const i=plats.indexOf(p);
+    if(i===-1){plats.push(p);el.classList.add('sel');}
+    else{plats.splice(i,1);el.classList.remove('sel');}
+  }
+  async function finish(){
+    const btn=document.getElementById('fin-btn');
+    btn.disabled=true;btn.textContent='Saving...';
+    const name=document.getElementById('ob-name').value.trim();
+    const biz=document.getElementById('ob-biz').value.trim();
+    const sector=document.getElementById('ob-sector').value;
+    const location=document.getElementById('ob-location').value;
+    const desc=document.getElementById('ob-desc').value.trim();
+    await sb.from('profiles').upsert({
+      user_id:user.id,name,business_name:biz,sector,location,
+      description:desc,language:lang,platforms:plats,has_onboarded:true,
+      updated_at:new Date().toISOString()
+    },{onConflict:'user_id'});
+    await sb.auth.updateUser({data:{name,business_name:biz,sector,location,language:lang,has_onboarded:true}});
+    window.location.href='connect-platforms.html';
+  }
+</script>
+</body>
+</html>

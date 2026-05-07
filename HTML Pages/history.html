@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Score History — DPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --navy:#0f1f3d; --blue:#2563eb; --green:#10b981; --amber:#f59e0b; --red:#ef4444; --slate:#f8fafc; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--slate); color: var(--text); min-height: 100vh; }
+    .sidebar { position: fixed; left:0; top:0; bottom:0; width:220px; background:var(--navy); display:flex; flex-direction:column; padding:24px 0; z-index:100; }
+    .sidebar-logo { padding:0 24px 24px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .sidebar-logo .mark { font-size:22px; font-weight:700; color:#fff; }
+    .sidebar-logo .sub  { font-size:10px; color:rgba(255,255,255,.45); margin-top:2px; }
+    .nav { flex:1; padding:16px 0; }
+    .nav a { display:flex; align-items:center; gap:10px; padding:10px 24px; color:rgba(255,255,255,.55); text-decoration:none; font-size:13.5px; font-weight:500; transition:all .2s; border-left:3px solid transparent; }
+    .nav a:hover  { color:#fff; background:rgba(255,255,255,.06); }
+    .nav a.active { color:#fff; background:rgba(255,255,255,.1); border-left-color:var(--blue); }
+    .sidebar-user { margin:0 12px; padding:12px; border-radius:10px; background:rgba(255,255,255,.07); display:flex; align-items:center; gap:10px; }
+    .avatar { width:34px; height:34px; border-radius:50%; background:var(--blue); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:13px; }
+    .avatar-info .name  { font-size:12px; font-weight:600; color:#fff; }
+    .avatar-info .email { font-size:10px; color:rgba(255,255,255,.45); }
+    .main { margin-left:220px; padding:32px 40px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+    .topbar h1 { font-size:22px; font-weight:700; color:var(--navy); }
+    .card { background:#fff; border-radius:16px; padding:24px; border:1.5px solid var(--border); margin-bottom:20px; }
+    .card-title { font-size:14px; font-weight:600; color:var(--navy); margin-bottom:20px; }
+
+    /* STATS ROW */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+    .stat-card { background:#fff; border-radius:14px; padding:20px; border:1.5px solid var(--border); text-align:center; }
+    .stat-val { font-size:32px; font-weight:700; font-family:'DM Mono',monospace; color:var(--navy); }
+    .stat-lbl { font-size:11px; color:var(--muted); margin-top:4px; font-weight:500; }
+
+    /* TABLE */
+    table { width:100%; border-collapse:collapse; }
+    th { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:8px 12px; border-bottom:2px solid var(--border); text-align:left; }
+    td { font-size:13px; padding:12px; border-bottom:1px solid var(--border); }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#f8fafc; }
+    .grade-pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+    .grade-strong     { background:#dcfce7; color:#15803d; }
+    .grade-moderate   { background:#fef3c7; color:#92400e; }
+    .grade-developing { background:#ffedd5; color:#9a3412; }
+    .grade-low        { background:#fee2e2; color:#991b1b; }
+    .score-num { font-family:'DM Mono',monospace; font-weight:700; font-size:15px; }
+    .ind-mini { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); }
+
+    .btn-export {
+      font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; padding:9px 20px;
+      border-radius:10px; border:1.5px solid var(--border); cursor:pointer; background:#fff;
+      color:var(--text); transition:all .2s;
+    }
+    .btn-export:hover { border-color:var(--blue); color:var(--blue); }
+    .empty { text-align:center; padding:40px; color:var(--muted); }
+    .empty .emoji { font-size:40px; margin-bottom:12px; }
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">DPT</div>
+    <div class="sub">Digital Presence Tracker</div>
+  </div>
+  <nav class="nav">
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="connect-platforms.html">🔌 Connect Platforms</a>
+    <a href="history.html" class="active">📈 Score History</a>
+    <a href="recommendations.html">💡 Recommendations</a>
+    <a href="settings.html">⚙️ Settings</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="avatar" id="av">?</div>
+    <div class="avatar-info">
+      <div class="name"  id="uname">Loading...</div>
+      <div class="email" id="uemail"></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div><h1>📈 Score History</h1></div>
+    <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="st-total">—</div><div class="stat-lbl">Total Computations</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-latest">—</div><div class="stat-lbl">Latest Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-best">—</div><div class="stat-lbl">Best Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="st-trend">—</div><div class="stat-lbl">Trend (First → Latest)</div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+    <div class="card-title">LDVS Over Time</div>
+    <canvas id="chart" height="120"></canvas>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-title">Computation Log</div>
+    <div id="table-wrap">
+      <div class="empty"><div class="emoji">📊</div><p>No scores computed yet.</p></div>
+    </div>
+  </div>
+</main>
+
+<script src="ldvs.js"></script>
+<script>
+  let currentUser = null;
+  let allScores   = [];
+
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) { window.location.href = 'login.html'; return; }
+    currentUser = data.session.user;
+    const name  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+    document.getElementById('uname').textContent  = name;
+    document.getElementById('uemail').textContent = currentUser.email;
+    document.getElementById('av').textContent     = name[0].toUpperCase();
+    loadHistory();
+  });
+
+  async function loadHistory() {
+    const { data } = await sb.from('scores').select('*')
+      .eq('user_id', currentUser.id).order('created_at', { ascending: true });
+
+    allScores = data || [];
+    if (allScores.length === 0) return;
+
+    // Stats
+    const scores = allScores.map(s => s.score);
+    const latest = scores[scores.length - 1];
+    const best   = Math.max(...scores);
+    const trend  = latest - scores[0];
+    document.getElementById('st-total').textContent  = allScores.length;
+    document.getElementById('st-latest').textContent = latest;
+    document.getElementById('st-best').textContent   = best;
+    document.getElementById('st-trend').textContent  = (trend >= 0 ? '+' : '') + trend;
+
+    // Chart
+    const ctx    = document.getElementById('chart').getContext('2d');
+    const labels = allScores.map(s => new Date(s.created_at).toLocaleDateString('en-KE', { day:'numeric', month:'short' }));
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'LDVS', data: scores,
+          borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.08)',
+          borderWidth: 2.5, tension: 0.4, fill: true,
+          pointBackgroundColor: '#2563eb', pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        }
+      }
+    });
+
+    // Table
+    const gradeClass = g => `grade-${g.toLowerCase()}`;
+    const rows = [...allScores].reverse().map(s => `
+      <tr>
+        <td>${new Date(s.created_at).toLocaleString('en-KE')}</td>
+        <td><span class="score-num" style="color:${classifyLDVS(s.score).color}">${s.score}</span></td>
+        <td><span class="grade-pill ${gradeClass(s.grade || classifyLDVS(s.score).grade)}">${s.grade || classifyLDVS(s.score).grade}</span></td>
+        <td class="ind-mini">${s.profile_complete || 0}</td>
+        <td class="ind-mini">${s.post_freq || 0}</td>
+        <td class="ind-mini">${s.engagement || 0}</td>
+        <td class="ind-mini">${s.responsiveness || 0}</td>
+        <td class="ind-mini">${s.platform_count || 0}</td>
+      </tr>`).join('');
+
+    document.getElementById('table-wrap').innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Date &amp; Time</th><th>LDVS</th><th>Grade</th>
+          <th>Profile</th><th>Posting</th><th>Engagement</th><th>Responsiveness</th><th>Platform</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  function exportCSV() {
+    if (allScores.length === 0) { alert('No data to export.'); return; }
+    const header = 'Date,LDVS,Grade,Profile,Posting,Engagement,Responsiveness,Platform\n';
+    const rows   = allScores.map(s =>
+      `${new Date(s.created_at).toISOString()},${s.score},${s.grade || ''},${s.profile_complete||0},${s.post_freq||0},${s.engagement||0},${s.responsiveness||0},${s.platform_count||0}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href = url; a.download = 'dpt-scores.csv'; a.click();
+  }
+</script>
+</body>
+</html>
