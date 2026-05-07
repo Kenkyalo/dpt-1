@@ -1,150 +1,160 @@
 // supabase/functions/get-recommendations/index.ts
 //
-// HOW TO DEPLOY:
-// 1. Install Supabase CLI: npm install -g supabase
-// 2. Login: supabase login
-// 3. Link your project: supabase link --project-ref xagbguncsimivveezckc
-// 4. Set your Groq key as a secret:
-//    supabase secrets set GROQ_API_KEY=your_actual_key_here
-// 5. Deploy: supabase functions deploy get-recommendations
+// Handles three actions securely (keys never exposed to browser):
+//   1. { action: "recommendations", scores, businessInfo } → Groq AI recs
+//   2. { action: "serp", businessName, location }          → SerpAPI search visibility
+//   3. { action: "pagespeed", url }                        → Google PageSpeed (proxied)
 //
-// That's it. The function will be live at:
-// https://xagbguncsimivveezckc.supabase.co/functions/v1/get-recommendations
+// Deploy:
+//   supabase secrets set GROQ_API_KEY=your_groq_key
+//   supabase secrets set SERP_API_KEY=f9c69d1301ae463b1d589fbaa7f3fab327d32e0dbf02f6d96e8744c0556b3df8
+//   supabase functions deploy get-recommendations
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama3-8b-8192";
 
-const corsHeaders = {
+const cors = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-serve(async (req) => {
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    // ── 1. Parse request body ──────────────────────────────────────
-    const { scores, businessInfo } = await req.json();
+    const body = await req.json();
+    const { action } = body;
 
-    if (!scores) {
-      return new Response(
-        JSON.stringify({ error: "scores is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // ── 1. AI RECOMMENDATIONS ─────────────────────────────────────
+    if (!action || action === "recommendations") {
+      const { scores, businessInfo } = body;
+      const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+      if (!GROQ_API_KEY) return json({ error: "GROQ_API_KEY not set" }, 500);
 
-    // ── 2. Get Groq key from Supabase secrets (never exposed to browser) ──
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "GROQ_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      const prompt = `You are a digital marketing advisor helping Kenyan SMEs improve their online presence.
 
-    // ── 3. Build prompt ───────────────────────────────────────────
-    const prompt = `You are a digital marketing advisor helping Kenyan small and medium-sized enterprises improve their online presence.
+Business: ${businessInfo?.businessName || "Kenyan SME"} | Sector: ${businessInfo?.sector || "General"} | Location: ${businessInfo?.location || "Kenya"}
+Connected platforms: ${(businessInfo?.platforms || []).join(", ") || "None yet"}
 
-Business details:
-- Name: ${businessInfo?.businessName || "Kenyan SME"}
-- Sector: ${businessInfo?.sector || "General"}
-- Location: ${businessInfo?.location || "Kenya"}
-- Connected platforms: ${(businessInfo?.platforms || []).join(", ") || "None yet"}
-
-Current LDVS Score: ${scores.ldvs}/100
-Indicator scores (each out of 100):
+LDVS Score: ${scores.ldvs}/100
 - Profile Completeness: ${scores.profileScore}
 - Posting Consistency: ${scores.postingScore}
 - Engagement Level: ${scores.engagementScore}
 - Responsiveness: ${scores.responsivenessScore}
 - Platform Presence: ${scores.platformScore}
 
-Generate 3 to 5 prioritized recommendations. Focus on the lowest scoring indicators first. For EACH recommendation provide BOTH English and Kiswahili versions. Be specific and practical for a Kenyan SME.
+Generate 3-5 prioritized recommendations. Focus on lowest scores first. Provide BOTH English and Kiswahili for each.
+Respond ONLY with valid JSON array, no markdown:
+[{"icon":"emoji","priority":"HIGH|MEDIUM|LOW","titleEn":"...","titleSw":"...","descEn":"2-3 sentences","descSw":"sentensi 2-3"}]`;
 
-Respond ONLY with a valid JSON array. No markdown, no explanation, no text before or after the array.
+      const res  = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: GROQ_MODEL, max_tokens: 1500, temperature: 0.7,
+          messages: [
+            { role: "system", content: "You are a digital marketing advisor. Always respond with valid JSON only, no markdown." },
+            { role: "user", content: prompt }
+          ]
+        })
+      });
 
-[
-  {
-    "icon": "single emoji",
-    "priority": "HIGH or MEDIUM or LOW",
-    "titleEn": "Short English title (max 6 words)",
-    "titleSw": "Kichwa kifupi kwa Kiswahili",
-    "descEn": "2-3 sentence English description. Specific and actionable.",
-    "descSw": "Maelezo kwa Kiswahili sentensi 2-3. Maalum na yenye vitendo."
-  }
-]`;
-
-    // ── 4. Call Groq ──────────────────────────────────────────────
-    const groqRes = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-        "Content-Type":  "application/json",
-      },
-      body: JSON.stringify({
-        model:       GROQ_MODEL,
-        max_tokens:  1500,
-        temperature: 0.7,
-        messages: [
-          {
-            role:    "system",
-            content: "You are a helpful digital marketing advisor for Kenyan SMEs. Always respond with valid JSON only. Never include markdown code fences.",
-          },
-          {
-            role:    "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
-
-    if (!groqRes.ok) {
-      const err = await groqRes.json();
-      throw new Error(`Groq error: ${err.error?.message || groqRes.statusText}`);
+      const data    = await res.json();
+      const text    = data.choices?.[0]?.message?.content?.trim() || "[]";
+      const cleaned = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+      const recommendations = JSON.parse(cleaned);
+      return json({ recommendations });
     }
 
-    const groqData = await groqRes.json();
-    const text     = groqData.choices?.[0]?.message?.content?.trim();
+    // ── 2. SERP API — Google Search Visibility ────────────────────
+    if (action === "serp") {
+      const { businessName, location = "Kenya" } = body;
+      const SERP_API_KEY = Deno.env.get("SERP_API_KEY");
+      if (!SERP_API_KEY) return json({ error: "SERP_API_KEY not set" }, 500);
 
-    if (!text) throw new Error("Empty response from Groq");
+      const query    = encodeURIComponent(`${businessName} ${location}`);
+      const endpoint = `https://serpapi.com/search.json`
+        + `?q=${query}&location=${encodeURIComponent(location)}`
+        + `&hl=en&gl=ke&num=10&api_key=${SERP_API_KEY}`;
 
-    // Strip any accidental markdown fences
-    const cleaned = text
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
+      const res  = await fetch(endpoint);
+      const data = await res.json();
 
-    const recommendations = JSON.parse(cleaned);
+      if (data.error) return json({ success: false, error: data.error, found: false, visibilityScore: 0 });
 
-    if (!Array.isArray(recommendations)) {
-      throw new Error("Groq did not return an array");
-    }
+      const organicResults = data.organic_results || [];
+      let position: number | null = null;
+      let foundResult: Record<string, string> | null = null;
 
-    // ── 5. Return recommendations ─────────────────────────────────
-    return new Response(
-      JSON.stringify({ recommendations }),
-      {
-        status:  200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      for (let i = 0; i < organicResults.length; i++) {
+        const r = organicResults[i];
+        if (r.title?.toLowerCase().includes(businessName.toLowerCase()) ||
+            r.snippet?.toLowerCase().includes(businessName.toLowerCase())) {
+          position = i + 1;
+          foundResult = r;
+          break;
+        }
       }
-    );
+
+      let visibilityScore = position ? Math.max(0, 100 - ((position - 1) * 10)) : 0;
+      const kg = data.knowledge_graph || null;
+      const hasKG = kg && (
+        kg.title?.toLowerCase().includes(businessName.toLowerCase()) ||
+        kg.organization?.toLowerCase().includes(businessName.toLowerCase())
+      );
+      if (hasKG) visibilityScore = Math.min(100, visibilityScore + 15);
+
+      return json({
+        success: true,
+        found: position !== null || hasKG,
+        position,
+        visibilityScore,
+        hasKnowledgePanel: hasKG,
+        title:   foundResult?.title || kg?.title || null,
+        snippet: foundResult?.snippet || null,
+        link:    foundResult?.link || kg?.website || null,
+        totalResults: data.search_information?.total_results || 0,
+      });
+    }
+
+    // ── 3. PAGESPEED PROXY ────────────────────────────────────────
+    if (action === "pagespeed") {
+      const { url } = body;
+      if (!url) return json({ error: "url required" }, 400);
+
+      const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`
+        + `?url=${encodeURIComponent(url)}&strategy=mobile`
+        + `&category=performance&category=seo&category=accessibility`;
+
+      const res  = await fetch(endpoint);
+      const data = await res.json();
+
+      const cats = data.lighthouseResult?.categories || {};
+      const performance   = Math.round((cats.performance?.score   || 0) * 100);
+      const seo           = Math.round((cats.seo?.score           || 0) * 100);
+      const accessibility = Math.round((cats.accessibility?.score || 0) * 100);
+      const composite     = Math.round(performance * 0.45 + seo * 0.35 + accessibility * 0.20);
+      const audits        = data.lighthouseResult?.audits || {};
+
+      return json({
+        success: true, composite, performance, seo, accessibility,
+        fcp:        audits["first-contentful-paint"]?.displayValue || "—",
+        lcp:        audits["largest-contentful-paint"]?.displayValue || "—",
+        mobileReady: audits["viewport"]?.score === 1,
+        url,
+      });
+    }
+
+    return json({ error: "Unknown action" }, 400);
 
   } catch (err) {
-    console.error("Edge function error:", err.message);
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      {
-        status:  500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    console.error("Edge function error:", err);
+    return json({ error: String(err) }, 500);
   }
 });
