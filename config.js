@@ -12,5 +12,5 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const SITE_URL       = window.location.origin;
 const DASHBOARD_URL  = SITE_URL + '/dashboard.html';
 const PLATFORMS_URL  = SITE_URL + '/connect-platforms.html';
-const LOGIN_URL      = SITE_URL + '/login.html';
+const LOGIN_URL      = SITE_URL + '/index.html';
 const ONBOARDING_URL = SITE_URL + '/onboarding.html';

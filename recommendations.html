@@ -153,7 +153,7 @@
   let latestScore   = null;
 
   sb.auth.getSession().then(({ data }) => {
-    if (!data.session) { window.location.href = 'login.html'; return; }
+    if (!data.session) { window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
     const name  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
     document.getElementById('uname').textContent  = name;

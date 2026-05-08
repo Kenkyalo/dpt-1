@@ -125,7 +125,7 @@
   const progs=[25,50,75,100];
 
   sb.auth.getSession().then(({data})=>{
-    if(!data.session){window.location.href='login.html';return;}
+    if(!data.session){window.location.href='index.html';return;}
     user=data.session.user;
     const m=user.user_metadata||{};
     if(m.name)          document.getElementById('ob-name').value=m.name;

@@ -400,7 +400,7 @@
 
   // ── AUTH CHECK ──────────────────────────────────────────────────
   sb.auth.getSession().then(({ data }) => {
-    if (!data.session) { window.location.href = 'login.html'; return; }
+    if (!data.session) { window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
     document.getElementById('uname').textContent  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
     document.getElementById('uemail').textContent = currentUser.email;

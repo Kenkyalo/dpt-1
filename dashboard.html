@@ -328,7 +328,7 @@
 
   // ── INIT ────────────────────────────────────────────────────────
   sb.auth.getSession().then(({ data }) => {
-    if (!data.session) { window.location.href = 'login.html'; return; }
+    if (!data.session) { window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
     const name  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
     document.getElementById('uname').textContent  = name;
@@ -360,7 +360,12 @@
     renderHero(latest);
     renderIndicators(latest);
     renderChart(allScores.reverse());
-    renderRecommendations(latest.id);
+    renderRecommendations(latest.id, latest, {
+      businessName: currentUser.user_metadata?.business_name || 'Your Business',
+      sector: currentUser.user_metadata?.sector || 'General',
+      location: currentUser.user_metadata?.location || 'Kenya',
+      platforms: latest.platforms || []
+    });
     loadPlatformStatus();
 
     document.getElementById('meta-computed').textContent = allScores.length;

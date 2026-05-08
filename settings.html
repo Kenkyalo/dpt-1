@@ -202,7 +202,7 @@
   let selectedLang = 'en';
 
   sb.auth.getSession().then(async ({ data }) => {
-    if (!data.session) { window.location.href = 'login.html'; return; }
+    if (!data.session) { window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
     const meta  = currentUser.user_metadata || {};
     const name  = meta.business_name || currentUser.email.split('@')[0];
@@ -303,7 +303,7 @@
 
   async function signOut() {
     await sb.auth.signOut();
-    window.location.href = 'login.html';
+    window.location.href = 'index.html';
   }
 
   async function confirmDelete() {

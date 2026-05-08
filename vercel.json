@@ -6,7 +6,7 @@
     },
     {
       "source": "/login",
-      "destination": "/login.html"
+      "destination": "/index.html"
     },
     {
       "source": "/register",

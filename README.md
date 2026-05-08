@@ -49,7 +49,7 @@ dpt-project/
 │       └── get-recommendations/
 │           └── index.ts          ← Groq AI proxy (Edge Function)
 │
-├── login.html                    ← Email + Google + Facebook sign in
+├── index.html                    ← Email + Google + Facebook sign in
 ├── register.html                 ← New account creation
 ├── forgot-password.html          ← Password reset
 ├── onboarding.html               ← First-time 4-step setup
