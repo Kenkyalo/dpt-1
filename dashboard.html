@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="config.js"></script>
+  <script src="groq-recommendations.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -451,28 +452,48 @@
     });
   }
 
-  async function renderRecommendations(scoreId) {
-    const { data: recs } = await sb.from('recommendations').select('*').eq('score_id', scoreId);
-    const container = document.getElementById('recs-container');
+async function renderRecommendations(scoreId, scores, businessInfo) {
+  const container = document.getElementById('recs-container');
+  container.innerHTML = `<div class="empty"><div class="emoji">🤖</div><p>Generating AI recommendations...</p></div>`;
 
-    if (!recs || recs.length === 0) {
-      container.innerHTML = `<div class="empty"><div class="emoji">✅</div><p>No recommendations — great work!</p></div>`;
+  try {
+    // Prepare the scores object that your groq-recommendations.js expects
+    const scoresForAI = {
+      ldvs: scores.score || 0,
+      profileScore: scores.profile_complete || 0,
+      postingScore: scores.post_freq || 0,
+      engagementScore: scores.engagement || 0,
+      responsivenessScore: scores.responsiveness || 0,
+      platformScore: scores.platform_count || 0
+    };
+
+    // Call your existing function (no need to rewrite anything!)
+    const recommendations = await getGroqRecommendations(scoresForAI, businessInfo, currentLang);
+    
+    // Display recommendations
+    if (!recommendations || recommendations.length === 0) {
+      container.innerHTML = `<div class="empty"><div class="emoji">✅</div><p>No recommendations needed — great work!</p></div>`;
       return;
     }
 
-    container.innerHTML = recs.map(r => {
-      const title = currentLang === 'sw' ? (r.title_sw || r.titleSw || r.title) : (r.title_en || r.titleEn || r.title);
-      const desc  = currentLang === 'sw' ? (r.desc_sw  || r.descSw  || r.desc)  : (r.desc_en  || r.descEn  || r.desc);
+    container.innerHTML = recommendations.map(rec => {
+      const title = currentLang === 'sw' ? (rec.titleSw || rec.titleEn) : (rec.titleEn || rec.title);
+      const desc = currentLang === 'sw' ? (rec.descSw || rec.descEn) : (rec.descEn || rec.desc);
       return `
-        <div class="rec-card ${r.priority}">
-          <div class="rec-icon">${r.icon || '💡'}</div>
+        <div class="rec-card ${rec.priority}">
+          <div class="rec-icon">${rec.icon || '💡'}</div>
           <div>
-            <div class="rec-title">${title}<span class="rec-badge ${r.priority}">${r.priority}</span></div>
+            <div class="rec-title">${title}<span class="rec-badge ${rec.priority}">${rec.priority}</span></div>
             <div class="rec-desc">${desc}</div>
           </div>
         </div>`;
     }).join('');
+
+  } catch (err) {
+    console.error('AI recommendation error:', err);
+    container.innerHTML = `<div class="empty"><div class="emoji">⚠️</div><p>Unable to load recommendations. Please try again later.</p></div>`;
   }
+}
 
   async function loadPlatformStatus() {
     const { data: conns } = await sb.from('platform_connections').select('platform').eq('user_id', currentUser.id);
