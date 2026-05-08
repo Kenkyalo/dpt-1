@@ -59,6 +59,13 @@
     .btn-export:hover { border-color:var(--blue); color:var(--blue); }
     .empty { text-align:center; padding:40px; color:var(--muted); }
     .empty .emoji { font-size:40px; margin-bottom:12px; }
+      .btn-logout-sidebar {
+      display:flex; align-items:center; gap:8px; width:calc(100% - 24px); margin:8px 12px 0;
+      padding:10px 14px; border-radius:10px; border:1.5px solid rgba(255,255,255,.12);
+      background:transparent; color:rgba(255,255,255,.6); font-family:'DM Sans',sans-serif;
+      font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; text-align:left;
+    }
+    .btn-logout-sidebar:hover { background:rgba(239,68,68,.15); border-color:#ef4444; color:#fca5a5; }
   </style>
 </head>
 <body>
@@ -74,6 +81,7 @@
     <a href="recommendations.html">💡 Recommendations</a>
     <a href="settings.html">⚙️ Settings</a>
   </nav>
+  <button class="btn-logout-sidebar" onclick="signOut()">🚪 Sign Out</button>
   <div class="sidebar-user">
     <div class="avatar" id="av">?</div>
     <div class="avatar-info">
@@ -201,6 +209,11 @@
     const blob = new Blob([header + rows], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a'); a.href = url; a.download = 'dpt-scores.csv'; a.click();
+  }
+
+  async function signOut() {
+    await sb.auth.signOut();
+    window.location.href = 'index.html';
   }
 </script>
 </body>

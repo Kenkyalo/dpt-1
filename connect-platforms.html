@@ -164,6 +164,13 @@
       cursor: pointer; background: #fff; color: var(--muted); transition: all .2s;
     }
     .lang-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+      .btn-logout-sidebar {
+      display:flex; align-items:center; gap:8px; width:calc(100% - 24px); margin:8px 12px 0;
+      padding:10px 14px; border-radius:10px; border:1.5px solid rgba(255,255,255,.12);
+      background:transparent; color:rgba(255,255,255,.6); font-family:'DM Sans',sans-serif;
+      font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; text-align:left;
+    }
+    .btn-logout-sidebar:hover { background:rgba(239,68,68,.15); border-color:#ef4444; color:#fca5a5; }
   </style>
 </head>
 <body>
@@ -181,6 +188,7 @@
     <a href="recommendations.html">💡 Recommendations</a>
     <a href="settings.html">⚙️ Settings</a>
   </nav>
+  <button class="btn-logout-sidebar" onclick="signOut()">🚪 Sign Out</button>
   <div class="sidebar-user">
     <div class="avatar" id="av">?</div>
     <div class="avatar-info">
@@ -817,6 +825,11 @@
     t.textContent = msg;
     t.className   = `toast ${type} show`;
     setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+
+  async function signOut() {
+    await sb.auth.signOut();
+    window.location.href = 'index.html';
   }
 </script>
 </body>
