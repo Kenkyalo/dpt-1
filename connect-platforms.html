@@ -453,6 +453,7 @@
       access_token:  accessToken,
       refresh_token: refreshToken || null,
       updated_at:    new Date().toISOString(),
+      connected_at:  new Date().toISOString(),
     }, { onConflict: 'user_id,platform' });
   }
 
@@ -553,6 +554,7 @@
         platform:   'facebook',
         raw_data:   platformData.facebook,
         synced_at:  new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,platform' });
 
       toast(`Facebook: ${posts.length} posts, ${totalLikes + totalComments + totalShares} interactions`, 'success');
@@ -591,10 +593,11 @@
         platformData.google = { profileComplete: filled / fields.length, posts: 2 };
 
         await sb.from('integrations').upsert({
-          user_id:   currentUser.id,
-          platform:  'google',
-          raw_data:  platformData.google,
-          synced_at: new Date().toISOString(),
+          user_id:    currentUser.id,
+          platform:   'google',
+          raw_data:   platformData.google,
+          synced_at:  new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id,platform' });
       }
       toast('Google Business data loaded!', 'success');
@@ -764,24 +767,27 @@
     const recs = await getGroqRecommendationsBilingual(scores, businessInfo);
 
     // Save to Supabase scores table
+    console.log('Saving score for user:', currentUser.id, 'scores:', scores);
     const { data: saved, error } = await sb.from('scores').insert({
-      user_id:        currentUser.id,
-      score:          scores.ldvs,
-      grade:          classifyLDVS(scores.ldvs).grade,
+      user_id:          currentUser.id,
+      score:            scores.ldvs,
+      grade:            classifyLDVS(scores.ldvs).grade,
       profile_complete: scores.profileScore,
-      post_freq:      scores.postingScore,
-      engagement:     scores.engagementScore,
-      responsiveness: scores.responsivenessScore,
-      platform_count: scores.platformScore,
-      platforms:      connectedList,
-      source:         'mixed',
-      created_at:     new Date().toISOString(),
+      post_freq:        scores.postingScore,
+      engagement:       scores.engagementScore,
+      responsiveness:   scores.responsivenessScore,
+      platform_count:   scores.platformScore,
+      platforms:        connectedList,
+      source:           'mixed',
+      created_at:       new Date().toISOString(),
     }).select().single();
+    console.log('Score save result — saved:', saved, 'error:', error);
 
     // Save recommendations
     if (saved && !error) {
       const recRows = recs.map(r => ({
         score_id: saved.id,
+        user_id:  currentUser.id,
         icon:     r.icon,
         priority: r.priority,
         title_en: r.titleEn || r.title,
