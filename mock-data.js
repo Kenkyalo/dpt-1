@@ -65,14 +65,8 @@ let lastGeminiTime    = 0;      // Timestamp of last successful Gemini call
 
 // ── GEMINI PROFILE GENERATOR ─────────────────────────────────────────────────
 async function generateGeminiProfile() {
-  // Check 5-minute cache — no need to call Gemini again so soon
-  const fiveMinutes = 5 * 60 * 1000;
-  if (lastGeminiProfile && (Date.now() - lastGeminiTime) < fiveMinutes) {
-    console.log('[mock] Using cached Gemini profile');
-    return lastGeminiProfile;
-  }
-
-  // Check rate-limit cooldown (30s between calls)
+  // Check rate-limit cooldown only (30s between calls to avoid quota abuse)
+  // No longer caching — each call should produce a fresh diverse profile
   if (geminiCooldown) {
     console.log('[mock] Gemini on cooldown, using fallback');
     return null;
@@ -93,7 +87,12 @@ async function generateGeminiProfile() {
   geminiCooldown = true;
   setTimeout(() => { geminiCooldown = false; }, 30000);
 
-  const prompt = `Generate a realistic Kenyan SME digital presence dataset for a ${sector} business in ${location}.
+  // Random seed forces Gemini to generate a different profile each time
+  const seed = Math.floor(Math.random() * 9999);
+  const performanceLevels = ['a struggling low-performing', 'a below-average', 'an average', 'a growing', 'a strong high-performing'];
+  const perfLevel = performanceLevels[Math.floor(Math.random() * performanceLevels.length)];
+
+  const prompt = `Generate a realistic Kenyan SME digital presence dataset for ${perfLevel} ${sector} business in ${location}. (seed:${seed})
 Return ONLY a valid JSON object with NO extra text, markdown, or explanation. Use this exact structure:
 {
   "name": "Business Name",
@@ -109,8 +108,10 @@ Return ONLY a valid JSON object with NO extra text, markdown, or explanation. Us
 Rules:
 - posts: integer 1-30, interactions: integer 10-1000, responseTime: float 0.5-24 (hours)
 - profileComplete: float 0.0-1.0, visitors: integer 50-1000, contact: 0 or 1
-- Make it realistic and varied — not every business is a top performer
-- The business name should sound authentically Kenyan
+- Performance level MUST match "${perfLevel}" — vary numbers significantly
+- Low performer: high response times (8-24h), few posts (1-4), low interactions (10-80)
+- High performer: low response times (0.5-2h), many posts (15-30), high interactions (500-1000)
+- The business name must sound authentically Kenyan and different each time
 - label format: "emoji Performance — Sector" e.g. "🏪 Growing — Retail"`;
 
   try {
@@ -121,7 +122,7 @@ Rules:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 400 },
+          generationConfig: { temperature: 1.0, maxOutputTokens: 500 },
         }),
       }
     );

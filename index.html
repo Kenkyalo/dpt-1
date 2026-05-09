@@ -121,7 +121,7 @@
     try {
       const meta = session.user?.user_metadata || {};
       if (meta.has_onboarded) { window.location.replace(DASHBOARD); return; }
-      const { data } = await sb.from('profiles')
+      const { data } = await sb.from('dpt_profiles')
         .select('has_onboarded').eq('user_id', session.user.id).single();
       window.location.replace(data?.has_onboarded ? DASHBOARD : ONBOARDING);
     } catch { window.location.replace(DASHBOARD); }
@@ -155,7 +155,7 @@
       return;
     }
 
-    sb.from('profiles')
+    sb.from('dpt_profiles')
       .upsert({ user_id: data.user.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' })
       .catch(() => {});
 

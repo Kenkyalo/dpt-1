@@ -183,12 +183,25 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhZ2JndW5jc2ltaXZ2ZWV6Y2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNjMyNDYsImV4cCI6MjA4ODYzOTI0Nn0.ex9vOixzsQ-p4gh9wQ5I3akcQAitdNlyv5XEgZYVc9k';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // If user is already logged in, send them to dashboard (they've already done onboarding)
   sb.auth.getSession().then(({ data }) => {
     if (data.session) window.location.href = 'dashboard.html';
   });
 
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) window.location.href = 'dashboard.html';
+  // Smart redirect: new users go to onboarding, returning users go to dashboard
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      // Check if they've already onboarded
+      const { data: profile } = await sb.from('dpt_profiles')
+        .select('has_onboarded')
+        .eq('user_id', session.user.id)
+        .single();
+      if (profile?.has_onboarded) {
+        window.location.href = 'dashboard.html';
+      } else {
+        window.location.href = 'onboarding.html';
+      }
+    }
   });
 
   async function handleRegister(e) {
@@ -211,7 +224,7 @@
       email, password: pass,
       options: {
         data: { name, business_name: biz, sector, location: loc },
-        emailRedirectTo: window.location.origin + '/dashboard.html',
+        emailRedirectTo: window.location.origin + '/onboarding.html',
       }
     });
 
@@ -224,12 +237,13 @@
     // If email confirmation is OFF in Supabase → user is immediately active
     if (data.session) {
       // Save profile
-      await sb.from('profiles').upsert({
+      await sb.from('dpt_profiles').upsert({
         user_id:       data.user.id,
         name, business_name: biz, sector, location: loc,
         created_at:    new Date().toISOString(),
       }, { onConflict: 'user_id' }).catch(() => {});
-      window.location.href = 'dashboard.html';
+      // Profile saved — send new user to onboarding to complete their business setup
+      window.location.href = 'onboarding.html';
     } else {
       // Email confirmation is ON
       showAlert('Account created! Check your email to confirm before signing in.', 'success');
@@ -241,7 +255,7 @@
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo:  window.location.origin + '/dashboard.html',
+        redirectTo:  window.location.origin + '/onboarding.html',
         queryParams: { access_type: 'offline', prompt: 'consent' },
       }
     });
@@ -253,7 +267,7 @@
       provider: 'facebook',
       options: {
         scopes:     'email,public_profile',
-        redirectTo: window.location.origin + '/dashboard.html',
+        redirectTo: window.location.origin + '/onboarding.html',
       }
     });
     if (error) showAlert('Facebook sign-up failed: ' + error.message, 'error');
