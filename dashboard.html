@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="config.js"></script>
-  <script src="groq-recommendations.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -45,6 +44,16 @@
     }
     .avatar-info .name  { font-size: 12px; font-weight: 600; color: #fff; }
     .avatar-info .email { font-size: 10px; color: rgba(255,255,255,.45); }
+    /* Logout button sits just above the user card at the bottom of the sidebar */
+    .btn-logout-sidebar {
+      margin: 0 12px 8px; padding: 10px 14px; border-radius: 10px;
+      border: 1.5px solid rgba(255,255,255,.15); background: transparent;
+      color: rgba(255,255,255,.6); font-family: 'DM Sans',sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all .2s; width: calc(100% - 24px);
+    }
+    .btn-logout-sidebar:hover { background: rgba(239,68,68,.15); border-color: #ef4444; color: #fca5a5; }
 
     .main { margin-left: 220px; padding: 32px 40px; }
     .topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
@@ -190,6 +199,7 @@
     <a href="recommendations.html">💡 Recommendations</a>
     <a href="settings.html">⚙️ Settings</a>
   </nav>
+  <button class="btn-logout-sidebar" onclick="signOut()">🚪 Sign Out</button>
   <div class="sidebar-user">
     <div class="avatar" id="av">?</div>
     <div class="avatar-info">
@@ -320,10 +330,13 @@
 <div class="toast" id="toast"></div>
 
 <script src="ldvs.js"></script>
+<script src="groq-recommendations.js"></script>
 <script>
   let currentUser = null;
   let currentLang = 'en';
-  let allScores   = [];
+  let allScores      = [];
+  let latestScore    = null;
+  let latestBizInfo  = null;
   let trendChart  = null;
 
   // ── INIT ────────────────────────────────────────────────────────
@@ -342,6 +355,12 @@
     loadDashboard();
   });
 
+  // Signs the user out of Supabase and returns them to the login page
+  async function signOut() {
+    await sb.auth.signOut();
+    window.location.href = 'index.html';
+  }
+
   async function loadDashboard() {
     const { data: scores } = await sb.from('scores').select('*')
       .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(12);
@@ -359,13 +378,15 @@
     const latest = allScores[0];
     renderHero(latest);
     renderIndicators(latest);
-    renderChart(allScores.reverse());
-    renderRecommendations(latest.id, latest, {
+    renderChart([...allScores].reverse());  // spread to avoid mutating allScores
+    latestScore   = latest;
+    latestBizInfo = {
       businessName: currentUser.user_metadata?.business_name || 'Your Business',
       sector: currentUser.user_metadata?.sector || 'General',
       location: currentUser.user_metadata?.location || 'Kenya',
       platforms: latest.platforms || []
-    });
+    };
+    renderRecommendations(latest.id, latestScore, latestBizInfo);
     loadPlatformStatus();
 
     document.getElementById('meta-computed').textContent = allScores.length;
@@ -495,8 +516,28 @@ async function renderRecommendations(scoreId, scores, businessInfo) {
     }).join('');
 
   } catch (err) {
-    console.error('AI recommendation error:', err);
-    container.innerHTML = `<div class="empty"><div class="emoji">⚠️</div><p>Unable to load recommendations. Please try again later.</p></div>`;
+    console.error('Recommendation error:', err);
+    // Silent fallback — groq-recommendations already has its own fallback,
+    // but if something else throws, show rule-based recommendations instead of an error
+    try {
+      const fallback = generateRecommendations({
+        profileScore:        scores.profile_complete || 0,
+        postingScore:        scores.post_freq        || 0,
+        engagementScore:     scores.engagement       || 0,
+        responsivenessScore: scores.responsiveness   || 0,
+        platformScore:       scores.platform_count   || 0,
+      }, currentLang);
+      container.innerHTML = fallback.map(rec => `
+        <div class="rec-card ${rec.priority}">
+          <div class="rec-icon">${rec.icon}</div>
+          <div>
+            <div class="rec-title">${rec.title}<span class="rec-badge ${rec.priority}">${rec.priority}</span></div>
+            <div class="rec-desc">${rec.desc}</div>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      container.innerHTML = '';  // fail silently — never show error to user
+    }
   }
 }
 
@@ -537,7 +578,7 @@ async function renderRecommendations(scoreId, scores, businessInfo) {
       document.getElementById(`btn-${l}`)?.classList.toggle('active', l === lang);
       document.getElementById(`rec-${l}`)?.classList.toggle('active', l === lang);
     });
-    if (allScores.length > 0) renderRecommendations(allScores[allScores.length - 1].id);
+    if (latestScore) renderRecommendations(latestScore.id, latestScore, latestBizInfo);
   }
 
   function toast(msg, type = '') {
