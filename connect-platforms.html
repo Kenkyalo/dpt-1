@@ -447,7 +447,7 @@
 
   // ── SAVE CONNECTION TO SUPABASE ──────────────────────────────────
   async function saveConnection(platform, accessToken, refreshToken) {
-    await sb.from('platform_connections').upsert({
+    await sb.from('dpt_platform_connections').upsert({
       user_id:       currentUser.id,
       platform:      platform,
       access_token:  accessToken,
@@ -459,7 +459,7 @@
 
   // ── LOAD EXISTING CONNECTIONS ────────────────────────────────────
   async function loadConnections() {
-    const { data } = await sb.from('platform_connections').select('*').eq('user_id', currentUser.id);
+    const { data } = await sb.from('dpt_platform_connections').select('*').eq('user_id', currentUser.id);
     connectedList = data?.map(c => c.platform) || [];
 
     ['facebook', 'google'].forEach(p => {
@@ -494,7 +494,7 @@
 
   async function disconnect(platform) {
     if (!confirm(`Disconnect ${platform}?`)) return;
-    await sb.from('platform_connections').delete()
+    await sb.from('dpt_platform_connections').delete()
       .eq('user_id', currentUser.id).eq('platform', platform);
     delete platformData[platform];
     location.reload();
@@ -549,7 +549,7 @@
       };
 
       // Save raw data to Supabase for records
-      await sb.from('integrations').upsert({
+      await sb.from('dpt_integrations').upsert({
         user_id:    currentUser.id,
         platform:   'facebook',
         raw_data:   platformData.facebook,
@@ -592,7 +592,7 @@
         const filled  = fields.filter(f => loc[f]).length;
         platformData.google = { profileComplete: filled / fields.length, posts: 2 };
 
-        await sb.from('integrations').upsert({
+        await sb.from('dpt_integrations').upsert({
           user_id:    currentUser.id,
           platform:   'google',
           raw_data:   platformData.google,
@@ -609,7 +609,7 @@
 
   // ── MANUAL DATA ──────────────────────────────────────────────────
   async function loadManualData() {
-    const { data } = await sb.from('integrations').select('*')
+    const { data } = await sb.from('dpt_integrations').select('*')
       .eq('user_id', currentUser.id).in('platform', ['whatsapp', 'website']);
 
     data?.forEach(row => {
@@ -655,7 +655,7 @@
 
     platformData[platform] = data;
 
-    await sb.from('integrations').upsert({
+    await sb.from('dpt_integrations').upsert({
       user_id:   currentUser.id,
       platform:  platform,
       raw_data:  data,
@@ -692,7 +692,7 @@
 
   // ── LOAD LAST SCORE ──────────────────────────────────────────────
   async function loadLastScore() {
-    const { data } = await sb.from('scores').select('*')
+    const { data } = await sb.from('dpt_scores').select('*')
       .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
 
     if (data && data.length > 0) {
@@ -768,7 +768,7 @@
 
     // Save to Supabase scores table
     console.log('Saving score for user:', currentUser.id, 'scores:', scores);
-    const { data: saved, error } = await sb.from('scores').insert({
+    const { data: saved, error } = await sb.from('dpt_scores').insert({
       user_id:          currentUser.id,
       score:            scores.ldvs,
       grade:            classifyLDVS(scores.ldvs).grade,
@@ -795,7 +795,7 @@
         desc_en:  r.descEn  || r.desc,
         desc_sw:  r.descSw  || r.desc,
       }));
-      if (recRows.length > 0) await sb.from('recommendations').insert(recRows);
+      if (recRows.length > 0) await sb.from('dpt_recommendations').insert(recRows);
     }
 
     updateScoreBanner(scores.ldvs);

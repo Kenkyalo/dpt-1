@@ -175,7 +175,7 @@
 
   async function loadRecs() {
     // Get latest score
-    const { data: scores } = await sb.from('scores').select('*')
+    const { data: scores } = await sb.from('dpt_scores').select('*')
       .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
 
     if (!scores || scores.length === 0) {
@@ -191,7 +191,7 @@
     document.getElementById('ban-grade').textContent = cl.grade;
 
     // Get recommendations for this score
-    const { data: recs } = await sb.from('recommendations').select('*')
+    const { data: recs } = await sb.from('dpt_recommendations').select('*')
       .eq('score_id', latestScore.id);
 
     if (!recs || recs.length === 0) {

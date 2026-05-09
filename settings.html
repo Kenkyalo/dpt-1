@@ -213,7 +213,7 @@
     document.getElementById('p-email').value      = currentUser.email;
 
     // Load profile from Supabase
-    const { data: profile } = await sb.from('profiles').select('*').eq('user_id', currentUser.id).single();
+    const { data: profile } = await sb.from('dpt_profiles').select('*').eq('user_id', currentUser.id).single();
     if (profile) {
       document.getElementById('p-name').value    = profile.name    || meta.name    || '';
       document.getElementById('p-biz').value     = profile.business_name || meta.business_name || '';
@@ -229,9 +229,9 @@
     }
 
     // Load stats
-    const { count: scoreCount } = await sb.from('scores').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
-    const { count: platCount  } = await sb.from('platform_connections').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
-    const { data: latestScore  } = await sb.from('scores').select('score').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
+    const { count: scoreCount } = await sb.from('dpt_scores').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: platCount  } = await sb.from('dpt_platform_connections').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { data: latestScore  } = await sb.from('dpt_scores').select('score').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(1);
 
     document.getElementById('st-scores').textContent    = scoreCount   || 0;
     document.getElementById('st-platforms').textContent = platCount    || 0;
@@ -253,7 +253,7 @@
     const sector   = document.getElementById('p-sector').value;
     const location = document.getElementById('p-location').value;
 
-    const { error } = await sb.from('profiles').upsert({
+    const { error } = await sb.from('dpt_profiles').upsert({
       user_id: currentUser.id, name, business_name: biz,
       sector, location, updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
@@ -269,7 +269,7 @@
     const btn = document.getElementById('save-lang-btn');
     btn.disabled = true; btn.textContent = 'Saving...';
 
-    await sb.from('profiles').upsert({
+    await sb.from('dpt_profiles').upsert({
       user_id: currentUser.id, language: selectedLang, updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
     await sb.auth.updateUser({ data: { language: selectedLang } });
@@ -313,13 +313,13 @@
     if (!double) return;
 
     // Delete all user data first (Supabase RLS cascade should handle this)
-    await sb.from('recommendations').delete().in('score_id',
-      (await sb.from('scores').select('id').eq('user_id', currentUser.id)).data?.map(s => s.id) || []
+    await sb.from('dpt_recommendations').delete().in('score_id',
+      (await sb.from('dpt_scores').select('id').eq('user_id', currentUser.id)).data?.map(s => s.id) || []
     );
-    await sb.from('scores').delete().eq('user_id', currentUser.id);
-    await sb.from('platform_connections').delete().eq('user_id', currentUser.id);
-    await sb.from('integrations').delete().eq('user_id', currentUser.id);
-    await sb.from('profiles').delete().eq('user_id', currentUser.id);
+    await sb.from('dpt_scores').delete().eq('user_id', currentUser.id);
+    await sb.from('dpt_platform_connections').delete().eq('user_id', currentUser.id);
+    await sb.from('dpt_integrations').delete().eq('user_id', currentUser.id);
+    await sb.from('dpt_profiles').delete().eq('user_id', currentUser.id);
 
     await sb.auth.signOut();
     window.location.href = 'register.html';

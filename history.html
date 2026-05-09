@@ -136,7 +136,7 @@
   });
 
   async function loadHistory() {
-    const { data } = await sb.from('scores').select('*')
+    const { data } = await sb.from('dpt_scores').select('*')
       .eq('user_id', currentUser.id).order('created_at', { ascending: true });
 
     allScores = data || [];

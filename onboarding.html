@@ -163,7 +163,7 @@
     const sector=document.getElementById('ob-sector').value;
     const location=document.getElementById('ob-location').value;
     const desc=document.getElementById('ob-desc').value.trim();
-    await sb.from('profiles').upsert({
+    await sb.from('dpt_profiles').upsert({
       user_id:user.id,name,business_name:biz,sector,location,
       description:desc,language:lang,platforms:plats,has_onboarded:true,
       updated_at:new Date().toISOString()

@@ -362,7 +362,7 @@
   }
 
   async function loadDashboard() {
-    const { data: scores } = await sb.from('scores').select('*')
+    const { data: scores } = await sb.from('dpt_scores').select('*')
       .eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(12);
 
     allScores = scores || [];
@@ -542,8 +542,8 @@ async function renderRecommendations(scoreId, scores, businessInfo) {
 }
 
   async function loadPlatformStatus() {
-    const { data: conns } = await sb.from('platform_connections').select('platform').eq('user_id', currentUser.id);
-    const { data: manual } = await sb.from('integrations').select('platform').eq('user_id', currentUser.id);
+    const { data: conns } = await sb.from('dpt_platform_connections').select('platform').eq('user_id', currentUser.id);
+    const { data: manual } = await sb.from('dpt_integrations').select('platform').eq('user_id', currentUser.id);
 
     const apiConnected = (conns || []).map(c => c.platform);
     const manualSaved  = (manual || []).map(m => m.platform);
