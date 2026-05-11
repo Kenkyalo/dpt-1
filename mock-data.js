@@ -4,6 +4,10 @@
 // using Gemini (free tier, separate from Groq which handles recommendations).
 // Falls back to hardcoded profiles if Gemini is unavailable or slow.
 
+// ── SIMULATION MODE FLAG ────────────────────────────────────────────────
+let isSimulationMode = false;      // When true, skip real API calls
+let lastSimulatedScore = null;     // Store the simulated score
+
 // ── FALLBACK PROFILES (used if Gemini fails or is rate-limited) ──────────────
 const SME_PROFILES = [
   {
@@ -63,35 +67,28 @@ const SME_PROFILES = [
   },
 ];
 
-let mockIndex        = 0;
-let geminiCooldown   = false;   // Rate-limit flag — 30s cooldown between Gemini calls
-let lastGeminiProfile = null;   // Cache — reuse if called again within 5 minutes
-let lastGeminiTime    = 0;      // Timestamp of last successful Gemini call
+let mockIndex = 0;
+let geminiCooldown = false;
 
 // ── GEMINI PROFILE GENERATOR ─────────────────────────────────────────────────
 async function generateGeminiProfile() {
-  // Check rate-limit cooldown only (30s between calls to avoid quota abuse)
   if (geminiCooldown) {
     console.log('[mock] Gemini on cooldown, using fallback');
     return null;
   }
 
-  // Get the current user's sector and location from Supabase session
-  // so the generated profile matches their business type
   let sector = 'Retail', location = 'Nairobi';
   try {
     const { data } = await sb.auth.getSession();
     if (data?.session?.user?.user_metadata) {
-      sector   = data.session.user.user_metadata.sector   || sector;
+      sector = data.session.user.user_metadata.sector || sector;
       location = data.session.user.user_metadata.location || location;
     }
   } catch (_) {}
 
-  // Start cooldown — regardless of success/failure, wait 30s before next call
   geminiCooldown = true;
   setTimeout(() => { geminiCooldown = false; }, 30000);
 
-  // Random seed forces Gemini to generate a different profile each time
   const seed = Math.floor(Math.random() * 9999);
   const performanceLevels = ['a struggling low-performing', 'a below-average', 'an average', 'a growing', 'a strong high-performing'];
   const perfLevel = performanceLevels[Math.floor(Math.random() * performanceLevels.length)];
@@ -134,21 +131,15 @@ Rules:
 
     if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
 
-    const json    = await res.json();
+    const json = await res.json();
     const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Strip any accidental markdown fences Gemini might add
     const clean = rawText.replace(/```json|```/gi, '').trim();
     const profile = JSON.parse(clean);
 
-    // Validate required fields exist before trusting the response
     if (!profile.facebook || !profile.instagram || !profile.whatsapp || !profile.website || !profile.telegram) {
       throw new Error('Gemini response missing required fields');
     }
 
-    // Cache it
-    lastGeminiProfile = profile;
-    lastGeminiTime    = Date.now();
     console.log('[mock] Gemini profile generated:', profile.name);
     return profile;
 
@@ -295,49 +286,142 @@ function calculateIndependentScore(sme) {
   };
 }
 
-// ── INJECT DATA INTO PAGE + TRIGGER SCORE COMPUTATION ────────────────────────
+// ── UPDATE UI WITH SIMULATED SCORE (NO REAL API CALLS) ──────────────────────
+function updateUIBypassRealAPIs(scoreResult) {
+  // Find and update score display elements
+  const scoreElement = document.getElementById('total-score');
+  const gradeElement = document.getElementById('score-grade');
+  const breakdownContainer = document.getElementById('score-breakdown');
+  
+  if (scoreElement) {
+    scoreElement.innerHTML = `${scoreResult.totalScore}<span style="font-size:14px;">/100</span>`;
+    scoreElement.style.color = scoreResult.totalScore >= 70 ? '#10b981' : scoreResult.totalScore >= 50 ? '#f59e0b' : '#ef4444';
+  }
+  
+  if (gradeElement) {
+    gradeElement.textContent = `Grade: ${scoreResult.grade}`;
+  }
+  
+  if (breakdownContainer && scoreResult.breakdown) {
+    breakdownContainer.innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>📋 Profile Score:</span>
+        <span style="font-weight:700;">${Math.round(scoreResult.breakdown.profile)}/100</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>💬 Engagement:</span>
+        <span style="font-weight:700;">${Math.round(scoreResult.breakdown.engagement)}/100</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>🔍 Presence:</span>
+        <span style="font-weight:700;">${Math.round(scoreResult.breakdown.presence)}/100</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>📝 Posting:</span>
+        <span style="font-weight:700;">${Math.round(scoreResult.breakdown.posting)}/100</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span>⚡ Responsiveness:</span>
+        <span style="font-weight:700;">${Math.round(scoreResult.breakdown.responsiveness)}/100</span>
+      </div>
+    `;
+  }
+  
+  console.log('[mock] UI updated with simulated score (no external APIs called)');
+}
+
+// ── INJECT DATA INTO PAGE (NO REAL API CALLS) ────────────────────────────────
 function injectMockData(sme) {
+  // Set simulation mode flag
+  isSimulationMode = true;
+  
+  // Calculate score from simulated data ONLY (no external APIs!)
+  const scoreResult = calculateIndependentScore(sme);
+  lastSimulatedScore = scoreResult;
+  
   // Fill WhatsApp form fields
-  const waResp  = document.getElementById('wa-response');
-  const waMsg   = document.getElementById('wa-messages');
+  const waResp = document.getElementById('wa-response');
+  const waMsg = document.getElementById('wa-messages');
   const waPosts = document.getElementById('wa-posts');
-  const waPro   = document.getElementById('wa-profile');
-  if (waResp)  waResp.value  = sme.whatsapp.responseTime;
-  if (waMsg)   waMsg.value   = sme.whatsapp.messages;
+  const waPro = document.getElementById('wa-profile');
+  if (waResp) waResp.value = sme.whatsapp.responseTime;
+  if (waMsg) waMsg.value = sme.whatsapp.messages;
   if (waPosts) waPosts.value = sme.whatsapp.postsPerWeek;
-  if (waPro)   waPro.value   = sme.whatsapp.profileComplete;
+  if (waPro) waPro.value = sme.whatsapp.profileComplete;
 
   // Fill website form fields
-  const webUrl  = document.getElementById('web-url');
-  const webVis  = document.getElementById('web-visitors');
+  const webUrl = document.getElementById('web-url');
+  const webVis = document.getElementById('web-visitors');
   const webPost = document.getElementById('web-posts');
-  const webCon  = document.getElementById('web-contact');
-  if (webUrl)  webUrl.value  = sme.website.url;
-  if (webVis)  webVis.value  = sme.website.visitors;
+  const webCon = document.getElementById('web-contact');
+  if (webUrl) webUrl.value = sme.website.url;
+  if (webVis) webVis.value = sme.website.visitors;
   if (webPost) webPost.value = sme.website.posts;
-  if (webCon)  webCon.value  = sme.website.contact;
+  if (webCon) webCon.value = sme.website.contact;
 
-  // Push into platformData global so computeAndSave() picks it up
+  // Fill Telegram fields if they exist
+  const teleUsername = document.getElementById('telegram-username');
+  const teleSubs = document.getElementById('telegram-subscribers');
+  if (teleUsername) teleUsername.value = sme.telegram.username;
+  if (teleSubs) teleSubs.value = sme.telegram.subscribers;
+
+  // Push into platformData global
   if (typeof platformData !== 'undefined') {
-    platformData.facebook  = { posts: sme.facebook.posts, interactions: sme.facebook.interactions, responseTime: sme.facebook.responseTime, profileComplete: sme.facebook.profileComplete };
-    platformData.instagram = { posts: sme.instagram.posts, interactions: sme.instagram.interactions, responseTime: sme.instagram.responseTime, profileComplete: sme.instagram.profileComplete };
-    platformData.google    = { profileComplete: sme.google.profileComplete, posts: 2, hasKnowledgePanel: sme.google.hasKnowledgePanel, rating: sme.google.rating, reviews: sme.google.reviews };
-    platformData.whatsapp  = { responseTime: sme.whatsapp.responseTime, messages: sme.whatsapp.messages, postsPerWeek: sme.whatsapp.postsPerWeek, profileComplete: sme.whatsapp.profileComplete };
-    platformData.website   = { url: sme.website.url, visitors: sme.website.visitors, posts: sme.website.posts, contact: sme.website.contact, pagespeedScore: sme.website.pagespeedScore };
-    platformData.telegram  = { username: sme.telegram.username, subscribers: sme.telegram.subscribers, hasPhoto: sme.telegram.hasPhoto };
-    if (typeof connectedList !== 'undefined') connectedList = ['facebook', 'instagram', 'google', 'telegram'];
+    platformData.facebook = { 
+      posts: sme.facebook.posts, 
+      interactions: sme.facebook.interactions, 
+      responseTime: sme.facebook.responseTime, 
+      profileComplete: sme.facebook.profileComplete 
+    };
+    platformData.instagram = { 
+      posts: sme.instagram.posts, 
+      interactions: sme.instagram.interactions, 
+      responseTime: sme.instagram.responseTime, 
+      profileComplete: sme.instagram.profileComplete 
+    };
+    platformData.google = { 
+      profileComplete: sme.google.profileComplete, 
+      posts: 2, 
+      hasKnowledgePanel: sme.google.hasKnowledgePanel, 
+      rating: sme.google.rating, 
+      reviews: sme.google.reviews 
+    };
+    platformData.whatsapp = { 
+      responseTime: sme.whatsapp.responseTime, 
+      messages: sme.whatsapp.messages, 
+      postsPerWeek: sme.whatsapp.postsPerWeek, 
+      profileComplete: sme.whatsapp.profileComplete 
+    };
+    platformData.website = { 
+      url: sme.website.url, 
+      visitors: sme.website.visitors, 
+      posts: sme.website.posts, 
+      contact: sme.website.contact, 
+      pagespeedScore: sme.website.pagespeedScore 
+    };
+    platformData.telegram = { 
+      username: sme.telegram.username, 
+      subscribers: sme.telegram.subscribers, 
+      hasPhoto: sme.telegram.hasPhoto 
+    };
+    if (typeof connectedList !== 'undefined') connectedList = ['facebook', 'instagram', 'google', 'telegram', 'whatsapp'];
   }
 
-  // Calculate score independently
-  const scoreResult = calculateIndependentScore(sme);
-  
   // Show toast with the injected profile summary
   showMockToast(sme, scoreResult);
-
-  // Auto-compute after 1500ms
-  if (typeof computeAndSave === 'function') {
-    setTimeout(() => computeAndSave(), 1500);
+  
+  // Update UI directly with simulated score (NO real API calls!)
+  updateUIBypassRealAPIs(scoreResult);
+  
+  // Try to save to database using the simulated score (bypass real APIs)
+  if (typeof saveSimulatedScoreToDatabase === 'function') {
+    saveSimulatedScoreToDatabase(scoreResult);
+  } else {
+    console.log('[mock] Simulated score:', scoreResult.totalScore, scoreResult.grade);
   }
+  
+  // Reset simulation mode after 2 seconds
+  setTimeout(() => { isSimulationMode = false; }, 2000);
 }
 
 // ── MAIN ENTRY — called when user picks a profile from the menu ───────────────
@@ -426,11 +510,13 @@ function renderMockFAB() {
   if (document.getElementById('mock-fab')) return;
 
   // Cache user metadata for the loading toast
-  sb.auth.getSession().then(({ data }) => {
-    if (data?.session?.user?.user_metadata) {
-      window._mockUserMeta = data.session.user.user_metadata;
-    }
-  });
+  if (typeof sb !== 'undefined' && sb.auth) {
+    sb.auth.getSession().then(({ data }) => {
+      if (data?.session?.user?.user_metadata) {
+        window._mockUserMeta = data.session.user.user_metadata;
+      }
+    });
+  }
 
   const style = document.createElement('style');
   style.textContent = `
@@ -533,6 +619,6 @@ function closeMockMenu() {
   if (menu) menu.classList.remove('open'); 
 }
 
-// ── AUTO-RENDER FAB WHEN SCRIPT LOADS (THIS WAS MISSING!) ────────────────────
+// ── AUTO-RENDER FAB WHEN SCRIPT LOADS ────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', renderMockFAB);
 if (document.readyState !== 'loading') renderMockFAB();
