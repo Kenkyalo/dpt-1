@@ -919,7 +919,13 @@
 
   // ── COMPUTE SCORE ────────────────────────────────────────────────
   async function computeAndSave() {
-    // If called automatically (e.g. by mock-data.js), currentUser may not be set yet
+     // ★★★ ADD THIS SIMULATION BYPASS AT THE VERY TOP ★★★
+    if (typeof isSimulating !== 'undefined' && isSimulating) {
+      console.log('[Simulation] Bypassing real API checks - using simulated data only');
+      // Just show a success message and return without calling real APIs
+      toast('✅ Simulation complete! Score calculated from demo data.', 'success');
+      return;
+    }// If called automatically (e.g. by mock-data.js), currentUser may not be set yet
     // because getSession() is async. Wait up to 3s for it to resolve before continuing.
     if (!currentUser) {
       const { data } = await sb.auth.getSession();
