@@ -6,8 +6,9 @@
   <title>Connect Platforms — DPT</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
+  <script src="apis.js"></script>
+  <link rel="stylesheet" href="theme.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -21,11 +22,11 @@
       --text:   #1e293b;
       --muted:  #64748b;
     }
-    body { font-family: 'DM Sans', sans-serif; background: var(--slate); color: var(--text); min-height: 100vh; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--slate); color: var(--text); min-height: 100vh; }
 
     /* ── SIDEBAR ── */
     .sidebar {
-      position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+      position: fixed; left: 0; top: 0; bottom: 0; width: 230px;
       background: var(--navy); display: flex; flex-direction: column; padding: 24px 0; z-index: 100;
     }
     .sidebar-logo { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,.1); }
@@ -52,7 +53,7 @@
     .avatar-info .email{ font-size: 10px; color: rgba(255,255,255,.45); }
 
     /* ── MAIN ── */
-    .main { margin-left: 220px; padding: 32px 40px; }
+    .main { margin-left: 230px; padding: 32px 40px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
     .topbar h1 { font-size: 22px; font-weight: 700; color: var(--navy); }
     .topbar p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -102,7 +103,7 @@
     .status-pill.connected { background: #dcfce7; color: #15803d; }
 
     .btn {
-      font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600;
       padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer; transition: all .2s;
     }
     .btn-connect    { background: var(--blue); color: #fff; }
@@ -119,7 +120,7 @@
     .form-group label { font-size: 11px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
     .form-group input {
       width: 100%; padding: 8px 12px; border: 1.5px solid var(--border);
-      border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+      border-radius: 8px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px;
       color: var(--text); background: var(--slate); outline: none; transition: border .2s;
     }
     .form-group input:focus { border-color: var(--blue); }
@@ -149,7 +150,7 @@
     .toast.error   { background: var(--red); }
 
     .compute-btn {
-      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 700;
       padding: 14px 32px; border-radius: 12px; border: none; cursor: pointer;
       background: linear-gradient(135deg, var(--blue), #1d4ed8); color: #fff;
       box-shadow: 0 4px 14px rgba(37,99,235,.35); transition: all .2s; display: block; margin: 0 auto;
@@ -159,7 +160,7 @@
 
     .lang-toggle { display: flex; gap: 6px; align-items: center; }
     .lang-btn {
-      font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 600;
       padding: 4px 12px; border-radius: 6px; border: 1.5px solid var(--border);
       cursor: pointer; background: #fff; color: var(--muted); transition: all .2s;
     }
@@ -167,13 +168,148 @@
       .btn-logout-sidebar {
       display:flex; align-items:center; gap:8px; width:calc(100% - 24px); margin:8px 12px 0;
       padding:10px 14px; border-radius:10px; border:1.5px solid rgba(255,255,255,.12);
-      background:transparent; color:rgba(255,255,255,.6); font-family:'DM Sans',sans-serif;
+      background:transparent; color:rgba(255,255,255,.6); font-family:'Plus Jakarta Sans',sans-serif;
       font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; text-align:left;
     }
     .btn-logout-sidebar:hover { background:rgba(239,68,68,.15); border-color:#ef4444; color:#fca5a5; }
+  
+    /* ══════════════════════════════════════════════
+       RESPONSIVE — MOBILE FIRST
+       Breakpoint: 768px
+    ══════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* ── Sidebar becomes bottom tab bar ── */
+      .sidebar {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; height: 60px; flex-direction: row;
+        padding: 0; z-index: 200; border-top: 1px solid rgba(255,255,255,.1);
+      }
+      .sidebar-logo   { display: none; }
+      .sidebar-user   { display: none; }
+      .btn-logout-sidebar { display: none; }
+      .nav {
+        flex-direction: row; padding: 0; flex: 1;
+        overflow-x: auto; display: flex;
+      }
+      .nav a {
+        flex-direction: column; align-items: center; justify-content: center;
+        padding: 6px 4px; font-size: 9px; gap: 2px; flex: 1;
+        border-left: none; border-top: 3px solid transparent; min-width: 56px;
+      }
+      .nav a.active { border-left: none; border-top-color: var(--blue, #2563eb); }
+
+      /* ── Main content — full width, bottom padding for tab bar ── */
+      .main {
+        margin-left: 0 !important;
+        padding: 16px 16px 80px !important;
+      }
+
+      /* ── Topbar stacks vertically ── */
+      .topbar {
+        flex-direction: column; gap: 12px; margin-bottom: 16px;
+      }
+      .topbar h1 { font-size: 18px; }
+      .topbar-right { width: 100%; justify-content: space-between; }
+      .topbar p { font-size: 12px; }
+
+      /* ── Score hero — single column ── */
+      .score-hero {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important; padding: 20px !important;
+        text-align: center;
+      }
+      .gauge-wrap { margin: 0 auto; }
+      .hero-meta  { text-align: center; display: flex; justify-content: space-around; }
+      .hero-meta .meta-item { margin-bottom: 0; }
+      .hero-info p { max-width: 100% !important; font-size: 12px; }
+      .hero-info h2 { font-size: 20px; }
+
+      /* ── Indicators — 2 columns on mobile ── */
+      .indicators {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+      }
+      .ind-score { font-size: 24px !important; }
+
+      /* ── Chart + platform grid → single column ── */
+      .grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+      }
+
+      /* ── Platform cards grid → single column ── */
+      .platforms-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* ── Score banner ── */
+      .score-banner {
+        flex-direction: column; gap: 12px; padding: 16px 20px !important;
+      }
+      .score-banner .value { font-size: 32px; }
+      .score-banner .hint  { max-width: 100% !important; }
+
+      /* ── Metrics grid → 3 columns ── */
+      .metrics-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      /* ── Buttons ── */
+      .btn-primary, .btn-outline {
+        font-size: 12px; padding: 8px 14px;
+      }
+      .compute-btn {
+        width: 100%; font-size: 13px; padding: 13px 20px;
+      }
+
+      /* ── Cards ── */
+      .card { padding: 16px; }
+
+      /* ── Lang toggle in topbar ── */
+      .lang-toggle { gap: 4px; }
+
+      /* ── Settings specific ── */
+      .settings-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* ── History table ── */
+      .history-table { font-size: 11px; }
+      .history-table th, .history-table td { padding: 8px 6px; }
+
+      /* ── Rec cards ── */
+      .rec-card { padding: 12px; }
+      .rec-icon  { font-size: 18px; }
+      .rec-title { font-size: 12px; }
+      .rec-desc  { font-size: 11px; }
+
+      /* ── Form rows → single column ── */
+      .form-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Hide text labels in bottom nav, show only emoji ── */
+      .nav a span.nav-label { display: none; }
+    }
+
+    @media (max-width: 400px) {
+      .indicators {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      .hero-meta {
+        flex-wrap: wrap; gap: 12px;
+      }
+    }
+
   </style>
+  <script src="theme.js"></script>
 </head>
 <body>
+<!-- MOBILE HEADER -->
+<header class="mobile-header" id="mobile-header"></header>
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav"></nav>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -188,6 +324,7 @@
     <a href="recommendations.html">💡 Recommendations</a>
     <a href="settings.html">⚙️ Settings</a>
   </nav>
+  <div class="sidebar-bottom">
   <button class="btn-logout-sidebar" onclick="signOut()">🚪 Sign Out</button>
   <div class="sidebar-user">
     <div class="avatar" id="av">?</div>
@@ -328,7 +465,7 @@
               </div>
               <div class="form-group">
                 <label>Business profile complete?</label>
-                <select id="wa-profile" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--slate);">
+                <select id="wa-profile" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;background:var(--slate);">
                   <option value="1">Yes</option>
                   <option value="0">No</option>
                 </select>
@@ -371,7 +508,7 @@
             </div>
             <div class="form-group">
               <label>Contact info visible?</label>
-              <select id="web-contact" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--slate);">
+              <select id="web-contact" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;background:var(--slate);">
                 <option value="1">Yes</option>
                 <option value="0">No</option>
               </select>
@@ -383,6 +520,54 @@
     </div>
     <div class="plat-right">
       <span class="status-pill" id="status-website">Manual</span>
+    </div>
+  </div>
+
+
+  <!-- TELEGRAM -->
+  <div class="section-title">Messaging & Community</div>
+  <div class="platform-card" id="card-telegram" style="margin-bottom:32px;">
+    <div class="plat-left" style="flex:1;">
+      <div class="plat-icon" style="background:#e0f2fe;font-size:22px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;">✈️</div>
+      <div style="flex:1;">
+        <div class="plat-name">Telegram Channel</div>
+        <div class="plat-desc">Enter your Telegram channel username to track subscribers and activity</div>
+        <div class="manual-form show" id="form-telegram">
+          <div class="form-row" style="margin-top:10px;">
+            <div class="form-group">
+              <label>Channel Username (without @)</label>
+              <input type="text" id="tg-username" placeholder="e.g. mybusiness"/>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+              <button class="btn btn-save" onclick="checkTelegramAndSave()" style="width:100%;">
+                🔍 Check Channel
+              </button>
+            </div>
+          </div>
+          <div id="tg-result" style="margin-top:10px;font-size:12px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+    <div class="plat-right">
+      <span class="status-pill" id="status-telegram">Not Connected</span>
+    </div>
+  </div>
+
+  <!-- SEARCH PRESENCE -->
+  <div class="section-title">Online Search Presence</div>
+  <div class="platform-card" id="card-search" style="margin-bottom:32px;">
+    <div class="plat-left" style="flex:1;">
+      <div class="plat-icon" style="background:#fef9c3;font-size:22px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;">🔍</div>
+      <div style="flex:1;">
+        <div class="plat-name">Google Search Presence</div>
+        <div class="plat-desc">Checks if your business appears in Google search results and local map pack</div>
+        <div id="search-result" style="margin-top:10px;font-size:12px;color:var(--muted);">
+          Will be checked automatically when you compute your score.
+        </div>
+      </div>
+    </div>
+    <div class="plat-right">
+      <span class="status-pill" id="status-search">Pending</span>
     </div>
   </div>
 
@@ -411,6 +596,14 @@
     if (!data.session) { window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
     document.getElementById('uname').textContent  = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+
+    // ── THEME + MOBILE NAV ──────────────────────────────────
+    const _name = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+    const _wrap = document.getElementById('theme-wrap');
+    if (_wrap) DPTTheme.render(_wrap);
+    DPTTheme.renderMobileNav('connect', _name, currentUser.email);
+    // ────────────────────────────────────────────────────────
+
     document.getElementById('uemail').textContent = currentUser.email;
     document.getElementById('av').textContent     = (currentUser.user_metadata?.business_name || currentUser.email)[0].toUpperCase();
     loadConnections();
@@ -610,7 +803,7 @@
   // ── MANUAL DATA ──────────────────────────────────────────────────
   async function loadManualData() {
     const { data } = await sb.from('dpt_integrations').select('*')
-      .eq('user_id', currentUser.id).in('platform', ['whatsapp', 'website']);
+      .eq('user_id', currentUser.id).in('platform', ['whatsapp', 'website', 'telegram']);
 
     data?.forEach(row => {
       platformData[row.platform] = row.raw_data;
@@ -631,6 +824,22 @@
         document.getElementById('status-website').textContent = 'Saved';
         document.getElementById('status-website').className   = 'status-pill connected';
         document.getElementById('card-website').classList.add('connected');
+      }
+      if (row.platform === 'telegram' && row.raw_data) {
+        platformData.telegram = row.raw_data;
+        const tgInput = document.getElementById('tg-username');
+        if (tgInput) tgInput.value = row.raw_data.username || '';
+        const tgResult = document.getElementById('tg-result');
+        if (tgResult && row.raw_data.title) {
+          tgResult.innerHTML = `
+            <div style="background:var(--surface2,#f8fafc);padding:10px;border-radius:8px;margin-top:6px;font-size:12px;">
+              <strong>${row.raw_data.title}</strong> · @${row.raw_data.username}<br>
+              👥 <strong>${(row.raw_data.subscribers||0).toLocaleString()}</strong> subscribers
+            </div>`;
+        }
+        document.getElementById('status-telegram').textContent = `${row.raw_data.subscribers||0} subs`;
+        document.getElementById('status-telegram').className   = 'status-pill connected';
+        document.getElementById('card-telegram').classList.add('connected');
       }
     });
   }
@@ -723,7 +932,40 @@
     }
 
     const btn = document.getElementById('compute-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Computing...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '🔍 Checking search presence...'; }
+
+    // ── Run external API checks in parallel ──────────────────
+    const businessName = currentUser.user_metadata?.business_name || '';
+    const location     = currentUser.user_metadata?.location || 'Kenya';
+    const websiteUrl   = platformData.website?.url || document.getElementById('web-url')?.value || '';
+    const tgUsername   = document.getElementById('tg-username')?.value?.trim() || '';
+
+    const [serpResult, psResult, tgResult] = await Promise.all([
+      checkSearchPresence(businessName, location),
+      checkPageSpeed(websiteUrl),
+      tgUsername ? checkTelegramChannel(tgUsername) : Promise.resolve(null),
+    ]);
+
+    // Show search result in UI
+    if (serpResult) {
+      const searchEl = document.getElementById('search-result');
+      const statusEl = document.getElementById('status-search');
+      if (serpResult.found) {
+        const pos = serpResult.inLocalPack ? '📍 Local Pack' : `#${serpResult.position} organic`;
+        if (searchEl) searchEl.innerHTML = `
+          <div style="background:var(--surface2,#f8fafc);padding:10px;border-radius:8px;margin-top:6px;font-size:12px;">
+            ✅ Found · <strong>${pos}</strong>
+            ${serpResult.rating ? ` · ⭐ ${serpResult.rating} (${serpResult.reviews} reviews)` : ''}
+          </div>`;
+        if (statusEl) { statusEl.textContent = 'Found ✅'; statusEl.className = 'status-pill connected'; }
+      } else {
+        if (searchEl) searchEl.innerHTML = `<div style="margin-top:6px;">❌ Not found in top Google results for "${businessName}"</div>`;
+        if (statusEl) statusEl.textContent = 'Not Found';
+      }
+    }
+
+    if (tgResult?.found) platformData.telegram = tgResult;
+    if (btn) btn.textContent = '🧮 Computing score...';
 
     // Aggregate metrics from all sources
     const fb  = platformData.facebook || {};
@@ -746,6 +988,14 @@
     const connected = connectedList.length +
       (wa.responseTime ? 1 : 0) + (web.url ? 1 : 0);
 
+    // External signals — boost relevant indicators
+    const searchScore = getSearchPresenceScore(serpResult);
+    const psScore     = getPageSpeedScore(psResult);
+    const tgScore     = getTelegramScore(tgResult);
+
+    // Telegram counts as a connected platform
+    const telegramConnected = tgResult?.found ? 1 : 0;
+
     const metrics = {
       profileFields:       profileFieldsFilled,
       totalFields:         profileFieldsTotal,
@@ -753,10 +1003,36 @@
       totalInteractions:   totalInter,
       numPosts:            Math.max(1, fb.posts || 1),
       avgResponseHours:    avgResp,
-      connectedPlatforms:  Math.min(5, connected),
+      connectedPlatforms:  Math.min(6, connected + telegramConnected),
+      // External boosts — passed to LDVS as overrides if better than self-reported
+      searchPresenceScore: searchScore,
+      pageSpeedScore:      psScore,
+      telegramScore:       tgScore,
     };
 
     const scores = computeLDVS(metrics);
+
+    // Apply external signal overrides to indicator scores
+    // Search presence improves platform presence score
+    if (searchScore > 0) {
+      scores.platformScore = Math.min(100, Math.round((scores.platformScore + searchScore) / 2));
+    }
+    // PageSpeed improves profile completeness (well-built website = complete profile)
+    if (psScore !== null) {
+      scores.profileScore = Math.min(100, Math.round((scores.profileScore * 0.7) + (psScore * 0.3)));
+    }
+    // Telegram subscribers improve engagement score
+    if (tgScore > 0) {
+      scores.engagementScore = Math.min(100, Math.round((scores.engagementScore * 0.8) + (tgScore * 0.2)));
+    }
+    // Recompute composite with updated indicators
+    scores.ldvs = Math.round(
+      scores.profileScore        * 0.20 +
+      scores.postingScore        * 0.20 +
+      scores.engagementScore     * 0.25 +
+      scores.responsivenessScore * 0.20 +
+      scores.platformScore       * 0.15
+    );
     // Try AI recommendations first, fall back to rule-based automatically
     const businessInfo = {
       businessName: currentUser.user_metadata?.business_name || '',

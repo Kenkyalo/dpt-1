@@ -6,12 +6,12 @@
   <title>Settings — DPT</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
+  <link rel="stylesheet" href="theme.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     :root{--navy:#0f1f3d;--blue:#2563eb;--green:#10b981;--red:#ef4444;--slate:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;}
-    body{font-family:'DM Sans',sans-serif;background:var(--slate);color:var(--text);min-height:100vh;}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--slate);color:var(--text);min-height:100vh;}
     .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--navy);display:flex;flex-direction:column;padding:24px 0;z-index:100;}
     .sidebar-logo{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1);}
     .sidebar-logo .mark{font-size:22px;font-weight:700;color:#fff;}
@@ -36,7 +36,7 @@
     .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
     .form-group{margin-bottom:18px;}
     .form-group label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;}
-    .form-group input,.form-group select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border .2s;}
+    .form-group input,.form-group select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border .2s;}
     .form-group input:focus,.form-group select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.08);}
     .form-group input:disabled{background:#f8fafc;color:var(--muted);cursor:not-allowed;}
     .form-group .hint{font-size:11px;color:var(--muted);margin-top:4px;}
@@ -49,12 +49,12 @@
     .lang-opt .lname{font-size:14px;font-weight:600;color:var(--navy);}
     .lang-opt .lsub{font-size:11px;color:var(--muted);}
 
-    .btn-save{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;cursor:pointer;transition:all .2s;}
+    .btn-save{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;cursor:pointer;transition:all .2s;}
     .btn-save:hover{background:#1d4ed8;}
     .btn-save:disabled{opacity:.5;cursor:not-allowed;}
-    .btn-danger{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:1.5px solid var(--red);background:#fff;color:var(--red);cursor:pointer;transition:all .2s;}
+    .btn-danger{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:10px;border:1.5px solid var(--red);background:#fff;color:var(--red);cursor:pointer;transition:all .2s;}
     .btn-danger:hover{background:#fee2e2;}
-    .btn-logout{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 24px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;}
+    .btn-logout{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 24px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;}
     .btn-logout:hover{border-color:var(--navy);color:var(--navy);}
 
     .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
@@ -74,9 +74,160 @@
     .toast.show{transform:translateY(0);opacity:1;}
     .toast.success{background:var(--green);}
     .toast.error{background:var(--red);}
+  
+    /* ══════════════════════════════════════════════
+       RESPONSIVE — MOBILE FIRST
+       Breakpoint: 768px
+    ══════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* ── Sidebar becomes bottom tab bar ── */
+      .sidebar {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; height: 60px; flex-direction: row;
+        padding: 0; z-index: 200; border-top: 1px solid rgba(255,255,255,.1);
+      }
+      .sidebar-logo   { display: none; }
+      .sidebar-user   { display: none; }
+      .btn-logout-sidebar { display: none; }
+      .nav {
+        flex-direction: row; padding: 0; flex: 1;
+        overflow-x: auto; display: flex;
+      }
+      .nav a {
+        flex-direction: column; align-items: center; justify-content: center;
+        padding: 6px 4px; font-size: 9px; gap: 2px; flex: 1;
+        border-left: none; border-top: 3px solid transparent; min-width: 56px;
+      }
+      .nav a.active { border-left: none; border-top-color: var(--blue, #2563eb); }
+
+      /* ── Main content — full width, bottom padding for tab bar ── */
+      .main {
+        margin-left: 0 !important;
+        padding: 16px 16px 80px !important;
+      }
+
+      /* ── Topbar stacks vertically ── */
+      .topbar {
+        flex-direction: column; gap: 12px; margin-bottom: 16px;
+      }
+      .topbar h1 { font-size: 18px; }
+      .topbar-right { width: 100%; justify-content: space-between; }
+      .topbar p { font-size: 12px; }
+
+      /* ── Score hero — single column ── */
+      .score-hero {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important; padding: 20px !important;
+        text-align: center;
+      }
+      .gauge-wrap { margin: 0 auto; }
+      .hero-meta  { text-align: center; display: flex; justify-content: space-around; }
+      .hero-meta .meta-item { margin-bottom: 0; }
+      .hero-info p { max-width: 100% !important; font-size: 12px; }
+      .hero-info h2 { font-size: 20px; }
+
+      /* ── Indicators — 2 columns on mobile ── */
+      .indicators {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+      }
+      .ind-score { font-size: 24px !important; }
+
+      /* ── Chart + platform grid → single column ── */
+      .grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+      }
+
+      /* ── Platform cards grid → single column ── */
+      .platforms-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* ── Score banner ── */
+      .score-banner {
+        flex-direction: column; gap: 12px; padding: 16px 20px !important;
+      }
+      .score-banner .value { font-size: 32px; }
+      .score-banner .hint  { max-width: 100% !important; }
+
+      /* ── Metrics grid → 3 columns ── */
+      .metrics-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+
+      /* ── Buttons ── */
+      .btn-primary, .btn-outline {
+        font-size: 12px; padding: 8px 14px;
+      }
+      .compute-btn {
+        width: 100%; font-size: 13px; padding: 13px 20px;
+      }
+
+      /* ── Cards ── */
+      .card { padding: 16px; }
+
+      /* ── Lang toggle in topbar ── */
+      .lang-toggle { gap: 4px; }
+
+      /* ── Settings specific ── */
+      .settings-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* ── History table ── */
+      .history-table { font-size: 11px; }
+      .history-table th, .history-table td { padding: 8px 6px; }
+
+      /* ── Rec cards ── */
+      .rec-card { padding: 12px; }
+      .rec-icon  { font-size: 18px; }
+      .rec-title { font-size: 12px; }
+      .rec-desc  { font-size: 11px; }
+
+      /* ── Form rows → single column ── */
+      .form-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Hide text labels in bottom nav, show only emoji ── */
+      .nav a span.nav-label { display: none; }
+    }
+
+    @media (max-width: 400px) {
+      .indicators {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      .hero-meta {
+        flex-wrap: wrap; gap: 12px;
+      }
+    }
+
+  
+    /* ── TOGGLE SWITCH ── */
+    .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: var(--border); border-radius: 26px; transition: .3s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute; width: 20px; height: 20px;
+      left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
+      transition: .3s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--blue); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+
   </style>
+  <script src="theme.js"></script>
 </head>
 <body>
+<!-- MOBILE HEADER -->
+<header class="mobile-header" id="mobile-header"></header>
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav"></nav>
 <aside class="sidebar">
   <div class="sidebar-logo"><div class="mark">DPT</div><div class="sub">Digital Presence Tracker</div></div>
   <nav class="nav">
@@ -183,7 +334,26 @@
     </div>
   </div>
 
-  <!-- DANGER ZONE -->
+  
+          <!-- LEADERBOARD OPT-IN -->
+          <div class="settings-section" style="margin-bottom:24px;">
+            <h3 class="section-title">🏆 Leaderboard Visibility</h3>
+            <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;">
+              <div>
+                <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px;">Appear on Public Leaderboard</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5;">
+                  Show your business name, sector, location, and LDVS score on the public leaderboard.
+                  If disabled, you appear as "Anonymous SME".
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="leaderboard-toggle" onchange="saveLeaderboardPref(this.checked)"/>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- DANGER ZONE -->
   <div class="section danger-zone">
     <div class="section-header">
       <div><h2>⚠️ Danger Zone</h2><p>Permanently delete your account and all associated data</p></div>
@@ -208,6 +378,14 @@
     const name  = meta.business_name || currentUser.email.split('@')[0];
 
     document.getElementById('uname').textContent  = name;
+
+    // ── THEME + MOBILE NAV ──────────────────────────────────
+    const _name = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+    const _wrap = document.getElementById('theme-wrap');
+    if (_wrap) DPTTheme.render(_wrap);
+    DPTTheme.renderMobileNav('settings', _name, currentUser.email);
+    // ────────────────────────────────────────────────────────
+
     document.getElementById('uemail').textContent = currentUser.email;
     document.getElementById('av').textContent     = name[0].toUpperCase();
     document.getElementById('p-email').value      = currentUser.email;
@@ -263,6 +441,14 @@
     btn.disabled = false; btn.textContent = 'Save Changes';
     if (error) { toast('Failed to save: ' + error.message, 'error'); }
     else        { toast('Profile saved!', 'success'); document.getElementById('uname').textContent = biz || name; }
+
+    // ── THEME + MOBILE NAV ──────────────────────────────────
+    const _name = currentUser.user_metadata?.business_name || currentUser.email.split('@')[0];
+    const _wrap = document.getElementById('theme-wrap');
+    if (_wrap) DPTTheme.render(_wrap);
+    DPTTheme.renderMobileNav('settings', _name, currentUser.email);
+    // ────────────────────────────────────────────────────────
+
   }
 
   async function saveLang() {
