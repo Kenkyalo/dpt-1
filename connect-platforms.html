@@ -917,263 +917,292 @@
     }
   }
 
+  // ── COMPUTE SCORE ────────────────────────────────────────────────
   async function computeAndSave() {
-  // ★★★ CHECK SIMULATION MODE - BYPASS REAL API CALLS ★★★
-  if (typeof window.isSimulating !== 'undefined' && window.isSimulating === true) {
-    console.log('[Simulation] Bypassing real API checks - using simulated data only');
-    
-    // Calculate score directly from platformData (already filled by mock)
-    let profileScore = 0;
-    let profileMax = 0;
-    
-    if (platformData.facebook?.profileComplete) {
-      profileScore += platformData.facebook.profileComplete * 25;
-      profileMax += 25;
-    }
-    if (platformData.instagram?.profileComplete) {
-      profileScore += platformData.instagram.profileComplete * 25;
-      profileMax += 25;
-    }
-    if (platformData.google?.profileComplete) {
-      profileScore += platformData.google.profileComplete * 25;
-      profileMax += 25;
-    }
-    if (platformData.whatsapp?.profileComplete !== undefined) {
-      profileScore += platformData.whatsapp.profileComplete * 15;
-      profileMax += 15;
-    }
-    if (platformData.telegram?.hasPhoto) {
-      profileScore += 10;
-      profileMax += 10;
-    }
-    
-    const profileScoreNorm = profileMax > 0 ? (profileScore / profileMax) * 100 : 0;
-    
-    let engagementScore = 0;
-    if (platformData.facebook?.interactions) {
-      engagementScore += Math.min(100, (platformData.facebook.interactions / 500) * 100) * 0.5;
-    }
-    if (platformData.telegram?.subscribers) {
-      let tgScore = 0;
-      const subs = platformData.telegram.subscribers;
-      if (subs >= 1000) tgScore = 100;
-      else if (subs >= 500) tgScore = 80;
-      else if (subs >= 100) tgScore = 60;
-      else if (subs >= 50) tgScore = 40;
-      else if (subs >= 10) tgScore = 20;
-      else tgScore = 10;
-      engagementScore += tgScore * 0.5;
-    }
-    
-    let presenceScore = 0;
-    if (platformData.google?.hasKnowledgePanel) presenceScore += 40;
-    if (platformData.website?.pagespeedScore && platformData.website.pagespeedScore > 0) {
-      presenceScore += platformData.website.pagespeedScore * 0.6;
-    }
-    
-    const totalScore = (profileScoreNorm * 0.4) + (engagementScore * 0.35) + (presenceScore * 0.25);
-    
-    let grade = 'F';
-    if (totalScore >= 90) grade = 'A+';
-    else if (totalScore >= 80) grade = 'A';
-    else if (totalScore >= 70) grade = 'B';
-    else if (totalScore >= 60) grade = 'C';
-    else if (totalScore >= 50) grade = 'D';
-    
-    const simScore = {
-      totalScore: Math.round(totalScore),
-      grade: grade,
-      breakdown: {
-        profile: Math.round(profileScoreNorm),
-        engagement: Math.round(engagementScore),
-        presence: Math.round(presenceScore),
-        posting: 50,
-        responsiveness: 50
+    // ★★★ CHECK SIMULATION MODE - BYPASS REAL API CALLS ★★★
+    if (typeof window.isSimulating !== 'undefined' && window.isSimulating === true) {
+      console.log('[Simulation] Bypassing real API checks - using simulated data only');
+      
+      // Calculate score directly from platformData (already filled by mock)
+      let profileScore = 0;
+      let profileMax = 0;
+      
+      if (platformData.facebook?.profileComplete) {
+        profileScore += platformData.facebook.profileComplete * 25;
+        profileMax += 25;
       }
-    };
+      if (platformData.instagram?.profileComplete) {
+        profileScore += platformData.instagram.profileComplete * 25;
+        profileMax += 25;
+      }
+      if (platformData.google?.profileComplete) {
+        profileScore += platformData.google.profileComplete * 25;
+        profileMax += 25;
+      }
+      if (platformData.whatsapp?.profileComplete !== undefined) {
+        profileScore += platformData.whatsapp.profileComplete * 15;
+        profileMax += 15;
+      }
+      if (platformData.telegram?.hasPhoto) {
+        profileScore += 10;
+        profileMax += 10;
+      }
+      
+      const profileScoreNorm = profileMax > 0 ? (profileScore / profileMax) * 100 : 0;
+      
+      let engagementScore = 0;
+      if (platformData.facebook?.interactions) {
+        engagementScore += Math.min(100, (platformData.facebook.interactions / 500) * 100) * 0.5;
+      }
+      if (platformData.telegram?.subscribers) {
+        let tgScore = 0;
+        const subs = platformData.telegram.subscribers;
+        if (subs >= 1000) tgScore = 100;
+        else if (subs >= 500) tgScore = 80;
+        else if (subs >= 100) tgScore = 60;
+        else if (subs >= 50) tgScore = 40;
+        else if (subs >= 10) tgScore = 20;
+        else tgScore = 10;
+        engagementScore += tgScore * 0.5;
+      }
+      
+      let presenceScore = 0;
+      if (platformData.google?.hasKnowledgePanel) presenceScore += 40;
+      if (platformData.website?.pagespeedScore && platformData.website.pagespeedScore > 0) {
+        presenceScore += platformData.website.pagespeedScore * 0.6;
+      }
+      
+      const totalScore = (profileScoreNorm * 0.4) + (engagementScore * 0.35) + (presenceScore * 0.25);
+      
+      let grade = 'F';
+      if (totalScore >= 90) grade = 'A+';
+      else if (totalScore >= 80) grade = 'A';
+      else if (totalScore >= 70) grade = 'B';
+      else if (totalScore >= 60) grade = 'C';
+      else if (totalScore >= 50) grade = 'D';
+      
+      const simScore = {
+        totalScore: Math.round(totalScore),
+        grade: grade,
+        breakdown: {
+          profile: Math.round(profileScoreNorm),
+          engagement: Math.round(engagementScore),
+          presence: Math.round(presenceScore),
+          posting: 50,
+          responsiveness: 50
+        }
+      };
+      
+      // ★★★ SAVE SIMULATED SCORE TO DATABASE ★★★
+      if (currentUser) {
+        try {
+          const { data: saved, error } = await sb.from('dpt_scores').insert({
+            user_id:          currentUser.id,
+            score:            simScore.totalScore,
+            grade:            simScore.grade,
+            profile_complete: simScore.breakdown.profile,
+            post_freq:        simScore.breakdown.posting,
+            engagement:       simScore.breakdown.engagement,
+            responsiveness:   simScore.breakdown.responsiveness,
+            platform_count:   simScore.breakdown.presence,
+            platforms:        connectedList,
+            source:           'simulation',
+            created_at:       new Date().toISOString(),
+          }).select().single();
+          
+          if (error) {
+            console.error('Error saving simulated score:', error);
+          } else {
+            console.log('Simulated score saved:', saved);
+          }
+        } catch (err) {
+          console.error('Failed to save simulated score:', err);
+        }
+      }
+      
+      // Update UI with simulated score
+      updateScoreBanner(simScore.totalScore);
+      updateIndicators({
+        profileScore: simScore.breakdown.profile,
+        postingScore: simScore.breakdown.posting,
+        engagementScore: simScore.breakdown.engagement,
+        responsivenessScore: simScore.breakdown.responsiveness,
+        platformScore: simScore.breakdown.presence
+      });
+      
+      toast(`🎭 SIMULATION: ${simScore.totalScore}/100 (${simScore.grade})`, 'success');
+      
+      const btn = document.getElementById('compute-btn');
+      if (btn) { btn.disabled = false; btn.textContent = '🧮 Compute My LDVS Score'; }
+      
+      // NO REDIRECT - stay on page to see the result
+      return; // EXIT - NO REAL API CALLS
+    }
+
+    // ─── NORMAL MODE: REAL API CALLS (original code below) ───
     
-    // Update UI with simulated score
-    updateScoreBanner(simScore.totalScore);
-    updateIndicators({
-      profileScore: simScore.breakdown.profile,
-      postingScore: simScore.breakdown.posting,
-      engagementScore: simScore.breakdown.engagement,
-      responsivenessScore: simScore.breakdown.responsiveness,
-      platformScore: simScore.breakdown.presence
-    });
-    
-    toast(`🎭 SIMULATION: ${simScore.totalScore}/100 (${simScore.grade})`, 'success');
-    
+    // If called automatically (e.g. by mock-data.js), currentUser may not be set yet
+    // because getSession() is async. Wait up to 3s for it to resolve before continuing.
+    if (!currentUser) {
+      const { data } = await sb.auth.getSession();
+      if (data?.session) {
+        currentUser = data.session.user;
+      } else {
+        console.error('computeAndSave: no active session, aborting.');
+        return;
+      }
+    }
+
     const btn = document.getElementById('compute-btn');
-    if (btn) { btn.disabled = false; btn.textContent = '🧮 Compute My LDVS Score'; }
+    if (btn) { btn.disabled = true; btn.textContent = '🔍 Checking search presence...'; }
+
+    // ── Run external API checks in parallel ──────────────────
+    const businessName = currentUser.user_metadata?.business_name || '';
+    const location     = currentUser.user_metadata?.location || 'Kenya';
+    const websiteUrl   = platformData.website?.url || document.getElementById('web-url')?.value || '';
+    const tgUsername   = document.getElementById('tg-username')?.value?.trim() || '';
+
+    const [serpResult, psResult, tgResult] = await Promise.all([
+      checkSearchPresence(businessName, location),
+      checkPageSpeed(websiteUrl),
+      tgUsername ? checkTelegramChannel(tgUsername) : Promise.resolve(null),
+    ]);
+
+    // Show search result in UI
+    if (serpResult) {
+      const searchEl = document.getElementById('search-result');
+      const statusEl = document.getElementById('status-search');
+      if (serpResult.found) {
+        const pos = serpResult.inLocalPack ? '📍 Local Pack' : `#${serpResult.position} organic`;
+        if (searchEl) searchEl.innerHTML = `
+          <div style="background:var(--surface2,#f8fafc);padding:10px;border-radius:8px;margin-top:6px;font-size:12px;">
+            ✅ Found · <strong>${pos}</strong>
+            ${serpResult.rating ? ` · ⭐ ${serpResult.rating} (${serpResult.reviews} reviews)` : ''}
+          </div>`;
+        if (statusEl) { statusEl.textContent = 'Found ✅'; statusEl.className = 'status-pill connected'; }
+      } else {
+        if (searchEl) searchEl.innerHTML = `<div style="margin-top:6px;">❌ Not found in top Google results for "${businessName}"</div>`;
+        if (statusEl) statusEl.textContent = 'Not Found';
+      }
+    }
+
+    if (tgResult?.found) platformData.telegram = tgResult;
+    if (btn) btn.textContent = '🧮 Computing score...';
+
+    // Aggregate metrics from all sources
+    const fb  = platformData.facebook || {};
+    const gg  = platformData.google   || {};
+    const wa  = platformData.whatsapp || {};
+    const web = platformData.website  || {};
+
+    const totalPosts = (fb.posts || 0) + (wa.postsPerWeek ? wa.postsPerWeek * 4 : 0) + (web.posts || 0);
+    const totalInter = fb.interactions || 0;
+    const avgResp    = wa.responseTime || fb.responseTime || 12;
+
+    // Profile completeness across all platforms
+    let profileFieldsFilled = 0, profileFieldsTotal = 0;
+    if (fb.profileComplete !== undefined) { profileFieldsFilled += fb.profileComplete * 7; profileFieldsTotal += 7; }
+    if (gg.profileComplete !== undefined) { profileFieldsFilled += gg.profileComplete * 6; profileFieldsTotal += 6; }
+    if (wa.profileComplete !== undefined) { profileFieldsFilled += wa.profileComplete;      profileFieldsTotal += 1; }
+    if (web.contact        !== undefined) { profileFieldsFilled += web.contact;             profileFieldsTotal += 1; }
+    if (profileFieldsTotal === 0) { profileFieldsFilled = 2; profileFieldsTotal = 5; }
+
+    const connected = connectedList.length +
+      (wa.responseTime ? 1 : 0) + (web.url ? 1 : 0);
+
+    // External signals — boost relevant indicators
+    const searchScore = getSearchPresenceScore(serpResult);
+    const psScore     = getPageSpeedScore(psResult);
+    const tgScore     = getTelegramScore(tgResult);
+
+    // Telegram counts as a connected platform
+    const telegramConnected = tgResult?.found ? 1 : 0;
+
+    const metrics = {
+      profileFields:       profileFieldsFilled,
+      totalFields:         profileFieldsTotal,
+      postsLast30Days:     totalPosts,
+      totalInteractions:   totalInter,
+      numPosts:            Math.max(1, fb.posts || 1),
+      avgResponseHours:    avgResp,
+      connectedPlatforms:  Math.min(6, connected + telegramConnected),
+      searchPresenceScore: searchScore,
+      pageSpeedScore:      psScore,
+      telegramScore:       tgScore,
+    };
+
+    const scores = computeLDVS(metrics);
+
+    // Apply external signal overrides to indicator scores
+    if (searchScore > 0) {
+      scores.platformScore = Math.min(100, Math.round((scores.platformScore + searchScore) / 2));
+    }
+    if (psScore !== null) {
+      scores.profileScore = Math.min(100, Math.round((scores.profileScore * 0.7) + (psScore * 0.3)));
+    }
+    if (tgScore > 0) {
+      scores.engagementScore = Math.min(100, Math.round((scores.engagementScore * 0.8) + (tgScore * 0.2)));
+    }
     
-    return; // EXIT - NO REAL API CALLS
-  }
+    // Recompute composite with updated indicators
+    scores.ldvs = Math.round(
+      scores.profileScore        * 0.20 +
+      scores.postingScore        * 0.20 +
+      scores.engagementScore     * 0.25 +
+      scores.responsivenessScore * 0.20 +
+      scores.platformScore       * 0.15
+    );
+    
+    // Try AI recommendations first, fall back to rule-based automatically
+    const businessInfo = {
+      businessName: currentUser.user_metadata?.business_name || '',
+      sector:       currentUser.user_metadata?.sector        || '',
+      location:     currentUser.user_metadata?.location      || 'Kenya',
+      platforms:    connectedList,
+    };
+    const recs = await getGroqRecommendationsBilingual(scores, businessInfo);
 
-  // ─── NORMAL MODE: REAL API CALLS (original code below) ───
-  
-  // If called automatically (e.g. by mock-data.js), currentUser may not be set yet
-  // because getSession() is async. Wait up to 3s for it to resolve before continuing.
-  if (!currentUser) {
-    const { data } = await sb.auth.getSession();
-    if (data?.session) {
-      currentUser = data.session.user;
-    } else {
-      console.error('computeAndSave: no active session, aborting.');
-      return;
+    // Save to Supabase scores table
+    console.log('Saving score for user:', currentUser.id, 'scores:', scores);
+    const { data: saved, error } = await sb.from('dpt_scores').insert({
+      user_id:          currentUser.id,
+      score:            scores.ldvs,
+      grade:            classifyLDVS(scores.ldvs).grade,
+      profile_complete: scores.profileScore,
+      post_freq:        scores.postingScore,
+      engagement:       scores.engagementScore,
+      responsiveness:   scores.responsivenessScore,
+      platform_count:   scores.platformScore,
+      platforms:        connectedList,
+      source:           'mixed',
+      created_at:       new Date().toISOString(),
+    }).select().single();
+    console.log('Score save result — saved:', saved, 'error:', error);
+
+    // Save recommendations
+    if (saved && !error) {
+      const recRows = recs.map(r => ({
+        score_id: saved.id,
+        user_id:  currentUser.id,
+        icon:     r.icon,
+        priority: r.priority,
+        title_en: r.titleEn || r.title,
+        title_sw: r.titleSw || r.title,
+        desc_en:  r.descEn  || r.desc,
+        desc_sw:  r.descSw  || r.desc,
+      }));
+      if (recRows.length > 0) await sb.from('dpt_recommendations').insert(recRows);
     }
+
+    updateScoreBanner(scores.ldvs);
+    updateIndicators(scores);
+
+    if (btn) { btn.disabled = false; btn.textContent = '🧮 Compute My LDVS Score'; }
+    toast(`Score computed: ${scores.ldvs} — ${classifyLDVS(scores.ldvs).grade}`, 'success');
+
+    // Redirect to dashboard after short delay so user can see the score in the banner
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
   }
-
-  const btn = document.getElementById('compute-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '🔍 Checking search presence...'; }
-
-  // ── Run external API checks in parallel ──────────────────
-  const businessName = currentUser.user_metadata?.business_name || '';
-  const location     = currentUser.user_metadata?.location || 'Kenya';
-  const websiteUrl   = platformData.website?.url || document.getElementById('web-url')?.value || '';
-  const tgUsername   = document.getElementById('tg-username')?.value?.trim() || '';
-
-  const [serpResult, psResult, tgResult] = await Promise.all([
-    checkSearchPresence(businessName, location),
-    checkPageSpeed(websiteUrl),
-    tgUsername ? checkTelegramChannel(tgUsername) : Promise.resolve(null),
-  ]);
-
-  // Show search result in UI
-  if (serpResult) {
-    const searchEl = document.getElementById('search-result');
-    const statusEl = document.getElementById('status-search');
-    if (serpResult.found) {
-      const pos = serpResult.inLocalPack ? '📍 Local Pack' : `#${serpResult.position} organic`;
-      if (searchEl) searchEl.innerHTML = `
-        <div style="background:var(--surface2,#f8fafc);padding:10px;border-radius:8px;margin-top:6px;font-size:12px;">
-          ✅ Found · <strong>${pos}</strong>
-          ${serpResult.rating ? ` · ⭐ ${serpResult.rating} (${serpResult.reviews} reviews)` : ''}
-        </div>`;
-      if (statusEl) { statusEl.textContent = 'Found ✅'; statusEl.className = 'status-pill connected'; }
-    } else {
-      if (searchEl) searchEl.innerHTML = `<div style="margin-top:6px;">❌ Not found in top Google results for "${businessName}"</div>`;
-      if (statusEl) statusEl.textContent = 'Not Found';
-    }
-  }
-
-  if (tgResult?.found) platformData.telegram = tgResult;
-  if (btn) btn.textContent = '🧮 Computing score...';
-
-  // Aggregate metrics from all sources
-  const fb  = platformData.facebook || {};
-  const gg  = platformData.google   || {};
-  const wa  = platformData.whatsapp || {};
-  const web = platformData.website  || {};
-
-  const totalPosts = (fb.posts || 0) + (wa.postsPerWeek ? wa.postsPerWeek * 4 : 0) + (web.posts || 0);
-  const totalInter = fb.interactions || 0;
-  const avgResp    = wa.responseTime || fb.responseTime || 12;
-
-  // Profile completeness across all platforms
-  let profileFieldsFilled = 0, profileFieldsTotal = 0;
-  if (fb.profileComplete !== undefined) { profileFieldsFilled += fb.profileComplete * 7; profileFieldsTotal += 7; }
-  if (gg.profileComplete !== undefined) { profileFieldsFilled += gg.profileComplete * 6; profileFieldsTotal += 6; }
-  if (wa.profileComplete !== undefined) { profileFieldsFilled += wa.profileComplete;      profileFieldsTotal += 1; }
-  if (web.contact        !== undefined) { profileFieldsFilled += web.contact;             profileFieldsTotal += 1; }
-  if (profileFieldsTotal === 0) { profileFieldsFilled = 2; profileFieldsTotal = 5; }
-
-  const connected = connectedList.length +
-    (wa.responseTime ? 1 : 0) + (web.url ? 1 : 0);
-
-  // External signals — boost relevant indicators
-  const searchScore = getSearchPresenceScore(serpResult);
-  const psScore     = getPageSpeedScore(psResult);
-  const tgScore     = getTelegramScore(tgResult);
-
-  // Telegram counts as a connected platform
-  const telegramConnected = tgResult?.found ? 1 : 0;
-
-  const metrics = {
-    profileFields:       profileFieldsFilled,
-    totalFields:         profileFieldsTotal,
-    postsLast30Days:     totalPosts,
-    totalInteractions:   totalInter,
-    numPosts:            Math.max(1, fb.posts || 1),
-    avgResponseHours:    avgResp,
-    connectedPlatforms:  Math.min(6, connected + telegramConnected),
-    searchPresenceScore: searchScore,
-    pageSpeedScore:      psScore,
-    telegramScore:       tgScore,
-  };
-
-  const scores = computeLDVS(metrics);
-
-  // Apply external signal overrides to indicator scores
-  if (searchScore > 0) {
-    scores.platformScore = Math.min(100, Math.round((scores.platformScore + searchScore) / 2));
-  }
-  if (psScore !== null) {
-    scores.profileScore = Math.min(100, Math.round((scores.profileScore * 0.7) + (psScore * 0.3)));
-  }
-  if (tgScore > 0) {
-    scores.engagementScore = Math.min(100, Math.round((scores.engagementScore * 0.8) + (tgScore * 0.2)));
-  }
-  
-  // Recompute composite with updated indicators
-  scores.ldvs = Math.round(
-    scores.profileScore        * 0.20 +
-    scores.postingScore        * 0.20 +
-    scores.engagementScore     * 0.25 +
-    scores.responsivenessScore * 0.20 +
-    scores.platformScore       * 0.15
-  );
-  
-  // Try AI recommendations first, fall back to rule-based automatically
-  const businessInfo = {
-    businessName: currentUser.user_metadata?.business_name || '',
-    sector:       currentUser.user_metadata?.sector        || '',
-    location:     currentUser.user_metadata?.location      || 'Kenya',
-    platforms:    connectedList,
-  };
-  const recs = await getGroqRecommendationsBilingual(scores, businessInfo);
-
-  // Save to Supabase scores table
-  console.log('Saving score for user:', currentUser.id, 'scores:', scores);
-  const { data: saved, error } = await sb.from('dpt_scores').insert({
-    user_id:          currentUser.id,
-    score:            scores.ldvs,
-    grade:            classifyLDVS(scores.ldvs).grade,
-    profile_complete: scores.profileScore,
-    post_freq:        scores.postingScore,
-    engagement:       scores.engagementScore,
-    responsiveness:   scores.responsivenessScore,
-    platform_count:   scores.platformScore,
-    platforms:        connectedList,
-    source:           'mixed',
-    created_at:       new Date().toISOString(),
-  }).select().single();
-  console.log('Score save result — saved:', saved, 'error:', error);
-
-  // Save recommendations
-  if (saved && !error) {
-    const recRows = recs.map(r => ({
-      score_id: saved.id,
-      user_id:  currentUser.id,
-      icon:     r.icon,
-      priority: r.priority,
-      title_en: r.titleEn || r.title,
-      title_sw: r.titleSw || r.title,
-      desc_en:  r.descEn  || r.desc,
-      desc_sw:  r.descSw  || r.desc,
-    }));
-    if (recRows.length > 0) await sb.from('dpt_recommendations').insert(recRows);
-  }
-
-  updateScoreBanner(scores.ldvs);
-  updateIndicators(scores);
-
-  if (btn) { btn.disabled = false; btn.textContent = '🧮 Compute My LDVS Score'; }
-  toast(`Score computed: ${scores.ldvs} — ${classifyLDVS(scores.ldvs).grade}`, 'success');
-
-  // Redirect to dashboard after short delay so user can see the score in the banner
-  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
-}
 
   function updateScoreBanner(score) {
     const cl = classifyLDVS(score);
