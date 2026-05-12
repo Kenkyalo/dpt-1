@@ -5,7 +5,7 @@
 // Falls back to hardcoded profiles if Gemini is unavailable or slow.
 
 // ── SIMULATION MODE FLAG ────────────────────────────────────────────────
-let isSimulating = false;  // ← ADD THIS LINE
+window.isSimulating = false;
 
 // ── FALLBACK PROFILES (used if Gemini fails or is rate-limited) ──────────────
 const SME_PROFILES = [
@@ -14,9 +14,10 @@ const SME_PROFILES = [
     sector: "Fashion", location: "Nairobi",
     facebook:  { posts: 14, interactions: 420, responseTime: 1.5, profileComplete: 0.9 },
     instagram: { posts: 20, interactions: 680, responseTime: 2,   profileComplete: 0.85 },
-    google:    { profileComplete: 0.8 },
+    google:    { profileComplete: 0.8, hasKnowledgePanel: true, rating: 4.2, reviews: 47 },
     whatsapp:  { responseTime: 1,   messages: 25, postsPerWeek: 6, profileComplete: 1 },
-    website:   { url: 'https://aminafashion.co.ke', visitors: 520, posts: 4, contact: 1 },
+    website:   { url: 'https://aminafashion.co.ke', visitors: 520, posts: 4, contact: 1, pagespeedScore: 78 },
+    telegram:  { username: "amina_fashion", subscribers: 340, hasPhoto: true },
     label: "🛍️ High Performer — Fashion",
   },
   {
@@ -24,9 +25,10 @@ const SME_PROFILES = [
     sector: "Food & Beverage", location: "Mombasa",
     facebook:  { posts: 8,  interactions: 190, responseTime: 4,  profileComplete: 0.7 },
     instagram: { posts: 12, interactions: 310, responseTime: 5,  profileComplete: 0.7 },
-    google:    { profileComplete: 0.6 },
+    google:    { profileComplete: 0.6, hasKnowledgePanel: false, rating: 3.5, reviews: 23 },
     whatsapp:  { responseTime: 3,   messages: 18, postsPerWeek: 3, profileComplete: 1 },
-    website:   { url: '', visitors: 120, posts: 1, contact: 1 },
+    website:   { url: '', visitors: 120, posts: 1, contact: 1, pagespeedScore: 0 },
+    telegram:  { username: "", subscribers: 0, hasPhoto: false },
     label: "☕ Average — Food & Beverage",
   },
   {
@@ -34,9 +36,10 @@ const SME_PROFILES = [
     sector: "Technology", location: "Nairobi",
     facebook:  { posts: 3,  interactions: 45,  responseTime: 8,  profileComplete: 0.5 },
     instagram: { posts: 2,  interactions: 30,  responseTime: 12, profileComplete: 0.4 },
-    google:    { profileComplete: 0.3 },
+    google:    { profileComplete: 0.3, hasKnowledgePanel: false, rating: 0, reviews: 0 },
     whatsapp:  { responseTime: 6,   messages: 8,  postsPerWeek: 1, profileComplete: 0 },
-    website:   { url: '', visitors: 60, posts: 0, contact: 0 },
+    website:   { url: '', visitors: 60, posts: 0, contact: 0, pagespeedScore: 0 },
+    telegram:  { username: "", subscribers: 0, hasPhoto: false },
     label: "💻 Low Performer — Tech",
   },
   {
@@ -44,9 +47,10 @@ const SME_PROFILES = [
     sector: "Healthcare", location: "Kisumu",
     facebook:  { posts: 6,  interactions: 95,  responseTime: 2,  profileComplete: 0.85 },
     instagram: { posts: 4,  interactions: 55,  responseTime: 3,  profileComplete: 0.75 },
-    google:    { profileComplete: 0.9 },
+    google:    { profileComplete: 0.9, hasKnowledgePanel: true, rating: 4.5, reviews: 32 },
     whatsapp:  { responseTime: 1.5, messages: 30, postsPerWeek: 4, profileComplete: 1 },
-    website:   { url: 'https://mamapima.co.ke', visitors: 280, posts: 2, contact: 1 },
+    website:   { url: 'https://mamapima.co.ke', visitors: 280, posts: 2, contact: 1, pagespeedScore: 65 },
+    telegram:  { username: "mamapima_health", subscribers: 120, hasPhoto: true },
     label: "🏥 Strong Profile — Healthcare",
   },
   {
@@ -54,43 +58,36 @@ const SME_PROFILES = [
     sector: "Retail", location: "Nakuru",
     facebook:  { posts: 18, interactions: 560, responseTime: 0.5, profileComplete: 0.95 },
     instagram: { posts: 25, interactions: 890, responseTime: 1,   profileComplete: 0.9  },
-    google:    { profileComplete: 0.7 },
+    google:    { profileComplete: 0.7, hasKnowledgePanel: true, rating: 4.8, reviews: 156 },
     whatsapp:  { responseTime: 0.5, messages: 40, postsPerWeek: 7, profileComplete: 1 },
-    website:   { url: 'https://zawadike.com', visitors: 750, posts: 6, contact: 1 },
+    website:   { url: 'https://zawadike.com', visitors: 750, posts: 6, contact: 1, pagespeedScore: 82 },
+    telegram:  { username: "zawadi_gifts", subscribers: 890, hasPhoto: true },
     label: "🎁 Top Performer — Retail",
   },
 ];
 
-let mockIndex        = 0;
-let geminiCooldown   = false;   // Rate-limit flag — 30s cooldown between Gemini calls
-let lastGeminiProfile = null;   // Cache — reuse if called again within 5 minutes
-let lastGeminiTime    = 0;      // Timestamp of last successful Gemini call
+let mockIndex = 0;
+let geminiCooldown = false;
 
 // ── GEMINI PROFILE GENERATOR ─────────────────────────────────────────────────
 async function generateGeminiProfile() {
-  // Check rate-limit cooldown only (30s between calls to avoid quota abuse)
-  // No longer caching — each call should produce a fresh diverse profile
   if (geminiCooldown) {
     console.log('[mock] Gemini on cooldown, using fallback');
     return null;
   }
 
-  // Get the current user's sector and location from Supabase session
-  // so the generated profile matches their business type
   let sector = 'Retail', location = 'Nairobi';
   try {
     const { data } = await sb.auth.getSession();
     if (data?.session?.user?.user_metadata) {
-      sector   = data.session.user.user_metadata.sector   || sector;
+      sector = data.session.user.user_metadata.sector || sector;
       location = data.session.user.user_metadata.location || location;
     }
   } catch (_) {}
 
-  // Start cooldown — regardless of success/failure, wait 30s before next call
   geminiCooldown = true;
   setTimeout(() => { geminiCooldown = false; }, 30000);
 
-  // Random seed forces Gemini to generate a different profile each time
   const seed = Math.floor(Math.random() * 9999);
   const performanceLevels = ['a struggling low-performing', 'a below-average', 'an average', 'a growing', 'a strong high-performing'];
   const perfLevel = performanceLevels[Math.floor(Math.random() * performanceLevels.length)];
@@ -104,9 +101,10 @@ Return ONLY a valid JSON object with NO extra text, markdown, or explanation. Us
   "label": "emoji Performance Level — ${sector}",
   "facebook":  { "posts": 0, "interactions": 0, "responseTime": 0.0, "profileComplete": 0.0 },
   "instagram": { "posts": 0, "interactions": 0, "responseTime": 0.0, "profileComplete": 0.0 },
-  "google":    { "profileComplete": 0.0 },
+  "google":    { "profileComplete": 0.0, "hasKnowledgePanel": false, "rating": 0.0, "reviews": 0 },
   "whatsapp":  { "responseTime": 0.0, "messages": 0, "postsPerWeek": 0, "profileComplete": 0.0 },
-  "website":   { "url": "", "visitors": 0, "posts": 0, "contact": 0 }
+  "website":   { "url": "", "visitors": 0, "posts": 0, "contact": 0, "pagespeedScore": 0 },
+  "telegram":  { "username": "", "subscribers": 0, "hasPhoto": false }
 }
 Rules:
 - posts: integer 1-30, interactions: integer 10-1000, responseTime: float 0.5-24 (hours)
@@ -132,21 +130,15 @@ Rules:
 
     if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
 
-    const json    = await res.json();
+    const json = await res.json();
     const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Strip any accidental markdown fences Gemini might add
     const clean = rawText.replace(/```json|```/gi, '').trim();
     const profile = JSON.parse(clean);
 
-    // Validate required fields exist before trusting the response
     if (!profile.facebook || !profile.instagram || !profile.whatsapp || !profile.website) {
       throw new Error('Gemini response missing required fields');
     }
 
-    // Cache it
-    lastGeminiProfile = profile;
-    lastGeminiTime    = Date.now();
     console.log('[mock] Gemini profile generated:', profile.name);
     return profile;
 
@@ -156,67 +148,68 @@ Rules:
   }
 }
 
-// ── INJECT DATA INTO PAGE + TRIGGER SCORE COMPUTATION ────────────────────────
+// ── INJECT DATA INTO PAGE ────────────────────────────────────────
 function injectMockData(sme) {
-  // Set simulation flag to TRUE before filling data
-  isSimulating = true;  // ← ADD THIS LINE
+  // Set simulation flag to TRUE
+  window.isSimulating = true;
   
   // Fill WhatsApp form fields
-  const waResp  = document.getElementById('wa-response');
-  const waMsg   = document.getElementById('wa-messages');
+  const waResp = document.getElementById('wa-response');
+  const waMsg = document.getElementById('wa-messages');
   const waPosts = document.getElementById('wa-posts');
-  const waPro   = document.getElementById('wa-profile');
-  if (waResp)  waResp.value  = sme.whatsapp.responseTime;
-  if (waMsg)   waMsg.value   = sme.whatsapp.messages;
+  const waPro = document.getElementById('wa-profile');
+  if (waResp) waResp.value = sme.whatsapp.responseTime;
+  if (waMsg) waMsg.value = sme.whatsapp.messages;
   if (waPosts) waPosts.value = sme.whatsapp.postsPerWeek;
-  if (waPro)   waPro.value   = sme.whatsapp.profileComplete;
+  if (waPro) waPro.value = sme.whatsapp.profileComplete;
 
   // Fill website form fields
-  const webUrl  = document.getElementById('web-url');
-  const webVis  = document.getElementById('web-visitors');
+  const webUrl = document.getElementById('web-url');
+  const webVis = document.getElementById('web-visitors');
   const webPost = document.getElementById('web-posts');
-  const webCon  = document.getElementById('web-contact');
-  if (webUrl)  webUrl.value  = sme.website.url;
-  if (webVis)  webVis.value  = sme.website.visitors;
+  const webCon = document.getElementById('web-contact');
+  if (webUrl) webUrl.value = sme.website.url;
+  if (webVis) webVis.value = sme.website.visitors;
   if (webPost) webPost.value = sme.website.posts;
-  if (webCon)  webCon.value  = sme.website.contact;
+  if (webCon) webCon.value = sme.website.contact;
 
-  // Push into platformData global so computeAndSave() picks it up
+  // Fill Telegram field if exists
+  const tgUsername = document.getElementById('tg-username');
+  if (tgUsername && sme.telegram) tgUsername.value = sme.telegram.username;
+
+  // Push into platformData global
   if (typeof platformData !== 'undefined') {
-    platformData.facebook  = { posts: sme.facebook.posts, interactions: sme.facebook.interactions, responseTime: sme.facebook.responseTime, profileComplete: sme.facebook.profileComplete };
+    platformData.facebook = { posts: sme.facebook.posts, interactions: sme.facebook.interactions, responseTime: sme.facebook.responseTime, profileComplete: sme.facebook.profileComplete };
     platformData.instagram = { posts: sme.instagram.posts, interactions: sme.instagram.interactions, responseTime: sme.instagram.responseTime, profileComplete: sme.instagram.profileComplete };
-    platformData.google    = { profileComplete: sme.google.profileComplete, posts: 2 };
-    platformData.whatsapp  = { responseTime: sme.whatsapp.responseTime, messages: sme.whatsapp.messages, postsPerWeek: sme.whatsapp.postsPerWeek, profileComplete: sme.whatsapp.profileComplete };
-    platformData.website   = { url: sme.website.url, visitors: sme.website.visitors, posts: sme.website.posts, contact: sme.website.contact };
+    platformData.google = { profileComplete: sme.google.profileComplete, posts: 2, hasKnowledgePanel: sme.google.hasKnowledgePanel, rating: sme.google.rating, reviews: sme.google.reviews };
+    platformData.whatsapp = { responseTime: sme.whatsapp.responseTime, messages: sme.whatsapp.messages, postsPerWeek: sme.whatsapp.postsPerWeek, profileComplete: sme.whatsapp.profileComplete };
+    platformData.website = { url: sme.website.url, visitors: sme.website.visitors, posts: sme.website.posts, contact: sme.website.contact, pagespeedScore: sme.website.pagespeedScore || 65 };
+    platformData.telegram = { username: sme.telegram?.username || '', subscribers: sme.telegram?.subscribers || 0, hasPhoto: sme.telegram?.hasPhoto || false };
     if (typeof connectedList !== 'undefined') connectedList = ['facebook', 'instagram', 'google'];
   }
 
-  // Show toast with the injected profile summary
   showMockToast(sme);
 
   // Auto-compute after 1500ms
   if (typeof computeAndSave === 'function') {
     setTimeout(() => {
       computeAndSave();
-      // Reset simulation flag after compute is done
-      setTimeout(() => { isSimulating = false; }, 2000);  // ← ADD THIS LINE
+      setTimeout(() => { window.isSimulating = false; }, 3000);
     }, 1500);
   }
 }
 
-// ── MAIN ENTRY — called when user picks a profile from the menu ───────────────
+// ── MAIN ENTRY ─────────────────────────────────────────────────
 async function runSimulation(profileIndex) {
   closeMockMenu();
   showLoadingToast();
 
   let sme = null;
 
-  // Try Gemini first (unless a specific fallback index was chosen)
   if (profileIndex === undefined || profileIndex === null) {
     sme = await generateGeminiProfile();
   }
 
-  // Fall back to hardcoded profiles if Gemini failed or a specific one was picked
   if (!sme) {
     const idx = profileIndex !== undefined && profileIndex !== null
       ? profileIndex
@@ -228,7 +221,7 @@ async function runSimulation(profileIndex) {
   injectMockData(sme);
 }
 
-// ── TOASTS ────────────────────────────────────────────────────────────────────
+// ── TOASTS ──────────────────────────────────────────────────────
 function showLoadingToast() {
   document.getElementById('mock-toast')?.remove();
   const toast = document.createElement('div');
@@ -241,7 +234,7 @@ function showLoadingToast() {
   `;
   toast.innerHTML = `
     <div style="font-weight:700;margin-bottom:6px;">✨ Generating AI Profile...</div>
-    <div style="font-size:12px;opacity:.7;">Gemini is creating a realistic ${getUserSector()} business profile for you.</div>
+    <div style="font-size:12px;opacity:.7;">Gemini is creating a realistic business profile for you.</div>
   `;
   document.body.appendChild(toast);
 }
@@ -253,16 +246,16 @@ function showMockToast(sme) {
   toast.style.cssText = `
     position:fixed;bottom:90px;right:24px;background:#1e293b;color:#fff;
     padding:14px 18px;border-radius:12px;font-family:'DM Sans',sans-serif;
-    font-size:13px;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,.25);
+    font-size:13px;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.25);
     z-index:9999;animation:slideUp .3s ease;
   `;
   toast.innerHTML = `
     <div style="font-weight:700;margin-bottom:6px;">${sme.label}</div>
     <div style="font-size:12px;opacity:.75;margin-bottom:8px;">${sme.name} · ${sme.location}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;opacity:.7;">
-      <span>📘 FB Posts: ${sme.facebook.posts}</span>
-      <span>📸 IG Posts: ${sme.instagram.posts}</span>
-      <span>💬 WA Resp: ${sme.whatsapp.responseTime}h</span>
+      <span>📘 FB: ${sme.facebook.posts} posts</span>
+      <span>📸 IG: ${sme.instagram.posts} posts</span>
+      <span>💬 WA: ${sme.whatsapp.responseTime}h</span>
       <span>🌐 Visitors: ${sme.website.visitors}/mo</span>
     </div>
     <div style="margin-top:10px;font-size:11px;opacity:.55;">Computing your LDVS score...</div>
@@ -271,25 +264,24 @@ function showMockToast(sme) {
   setTimeout(() => toast.remove(), 5000);
 }
 
-// Helper — gets sector from auth metadata for the loading toast label
 function getUserSector() {
   try {
-    // This is sync so we use whatever was last cached in the session
     const meta = window._mockUserMeta;
     return meta?.sector || 'SME';
   } catch (_) { return 'SME'; }
 }
 
-// ── FAB + MENU ────────────────────────────────────────────────────────────────
+// ── FAB BUTTON + MENU ───────────────────────────────────────────
 function renderMockFAB() {
   if (document.getElementById('mock-fab')) return;
 
-  // Cache user metadata for the loading toast
-  sb.auth.getSession().then(({ data }) => {
-    if (data?.session?.user?.user_metadata) {
-      window._mockUserMeta = data.session.user.user_metadata;
-    }
-  });
+  if (typeof sb !== 'undefined' && sb.auth) {
+    sb.auth.getSession().then(({ data }) => {
+      if (data?.session?.user?.user_metadata) {
+        window._mockUserMeta = data.session.user.user_metadata;
+      }
+    });
+  }
 
   const style = document.createElement('style');
   style.textContent = `
@@ -326,7 +318,6 @@ function renderMockFAB() {
     flex-direction:column;gap:4px;min-width:270px;
   `;
 
-  // AI Generate option — appears at the top, calls Gemini
   const aiItem = document.createElement('button');
   aiItem.style.cssText = `
     display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:4px;
@@ -340,13 +331,11 @@ function renderMockFAB() {
   aiItem.onclick = () => runSimulation(null);
   menu.appendChild(aiItem);
 
-  // Divider
   const divider = document.createElement('div');
   divider.style.cssText = 'font-size:10px;color:#94a3b8;font-weight:600;padding:4px 14px;text-transform:uppercase;letter-spacing:.5px;';
   divider.textContent = 'Or pick a preset';
   menu.appendChild(divider);
 
-  // Hardcoded fallback profiles
   SME_PROFILES.forEach((sme, i) => {
     const item = document.createElement('button');
     item.style.cssText = `
@@ -362,7 +351,6 @@ function renderMockFAB() {
     menu.appendChild(item);
   });
 
-  // Random fallback option
   const randItem = document.createElement('button');
   randItem.style.cssText = `
     display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:4px;
@@ -374,18 +362,3 @@ function renderMockFAB() {
   randItem.onmouseenter = () => { randItem.style.background='#f8fafc'; randItem.style.borderColor='#2563eb'; };
   randItem.onmouseleave = () => { randItem.style.background='transparent'; randItem.style.borderColor='#e2e8f0'; };
   randItem.onclick = () => runSimulation(Math.floor(Math.random() * SME_PROFILES.length));
-  menu.appendChild(randItem);
-
-  document.body.appendChild(menu);
-
-  document.addEventListener('click', (e) => {
-    if (!fab.contains(e.target) && !menu.contains(e.target)) closeMockMenu();
-  });
-}
-
-function toggleMockMenu() { document.getElementById('mock-menu')?.classList.toggle('open'); }
-function closeMockMenu()  { document.getElementById('mock-menu')?.classList.remove('open'); }
-
-// Auto-render FAB when script is loaded
-document.addEventListener('DOMContentLoaded', renderMockFAB);
-if (document.readyState !== 'loading') renderMockFAB();
