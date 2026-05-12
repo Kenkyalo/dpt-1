@@ -362,3 +362,25 @@ function renderMockFAB() {
   randItem.onmouseenter = () => { randItem.style.background='#f8fafc'; randItem.style.borderColor='#2563eb'; };
   randItem.onmouseleave = () => { randItem.style.background='transparent'; randItem.style.borderColor='#e2e8f0'; };
   randItem.onclick = () => runSimulation(Math.floor(Math.random() * SME_PROFILES.length));
+  menu.appendChild(randItem);
+
+  document.body.appendChild(menu);
+
+  document.addEventListener('click', (e) => {
+    if (!fab.contains(e.target) && !menu.contains(e.target)) closeMockMenu();
+  });
+}
+
+function toggleMockMenu() { 
+  const menu = document.getElementById('mock-menu');
+  if (menu) menu.classList.toggle('open'); 
+}
+
+function closeMockMenu() { 
+  const menu = document.getElementById('mock-menu');
+  if (menu) menu.classList.remove('open'); 
+}
+
+// ── AUTO-RENDER FAB WHEN SCRIPT LOADS ───────────────────────────
+document.addEventListener('DOMContentLoaded', renderMockFAB);
+if (document.readyState !== 'loading') renderMockFAB();
